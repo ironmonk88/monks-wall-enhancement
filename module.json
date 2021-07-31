@@ -1,0 +1,36 @@
+{
+	"name": "monks-wall-enhancement",
+	"title": "Monk's Wall Enhancement",
+	"description": "Enhancements to the Wall Tool.  Drag points together, freehand draw a wall, plus more.",
+	"version": "1.0.0",
+	"author": "IronMonk, ironmonk88#4075",
+	"socket": true,
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json"
+		},
+		{
+			"lang": "ja",
+			"name": "日本語",
+			"path": "lang/ja.json"
+		},
+		{
+			"lang": "es",
+			"name": "Español",
+			"path": "lang/es.json"
+		}
+	],
+	"esmodules": [
+		"monks-wall-enhancement.js",
+		"settings.js"
+	],
+	"url": "https://github.com/ironmonk88/monks-wall-enhancement",
+	"download": "https://github.com/ironmonk88/monks-wall-enhancement/archive/1.0.0.zip",
+	"manifest": "https://github.com/ironmonk88/monks-wall-enhancement/releases/latest/download/module.json",
+	"bugs": "https://github.com/ironmonk88/monks-wall-enhancement/issues",
+	"allowBugReporter": true,
+	"minimumCoreVersion": "0.8.0",
+	"compatibleCoreVersion": "0.8.8"
+}

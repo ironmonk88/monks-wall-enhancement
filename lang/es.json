@@ -1,0 +1,8 @@
+{
+	"I18N.LANGUAGE": "Español",
+	"I18N.MAINTAINERS": "@Viriato139ac#0342",
+ 
+	"MonksWallEnhancement.show-drag-points-together.name": "Mostrar juntos puntos superpuestos",
+	"MonksWallEnhancement.show-drag-points-together.hint": "Mostrar un botón conmutador en las herramientas de muros que permita arrastrar juntos varios puntos que estén perfectamente superpuestos",
+	
+}
