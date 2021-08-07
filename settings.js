@@ -14,4 +14,13 @@ export const registerSettings = function () {
 		default: true,
 		type: Boolean,
 	});
+
+	game.settings.register(modulename, "allow-doubleclick", {
+		name: "Allow double click split",
+		hint: "Allow double-clicking on a line to split the wall into two",
+		scope: "world",
+		config: true,
+		default: true,
+		type: Boolean,
+	});
 };
