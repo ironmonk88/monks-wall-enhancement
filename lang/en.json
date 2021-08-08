@@ -1,5 +1,9 @@
 {
 	"MonksWallEnhancement.show-drag-points-together.name": "Show Drag Points Together",
-	"MonksWallEnhancement.show-drag-points-together.hint": "Show a toggle button on the wall tools that will drag points together if they overlap exactly"
-	
+	"MonksWallEnhancement.show-drag-points-together.hint": "Show a toggle button on the wall tools that will drag points together if they overlap exactly",
+	"MonksWallEnhancement.allow-doubleclick.name": "Allow double click split",
+	"MonksWallEnhancement.allow-doubleclick.hint": "Allow double-clicking on a line to split the wall into two",
+	"MonksWallEnhancement.condense-wall-type.name": "Condense Wall Types",
+	"MonksWallEnhancement.condense-wall-type.hint": "Condense Wall Types to a single toggle button that can be changed."
+
 }

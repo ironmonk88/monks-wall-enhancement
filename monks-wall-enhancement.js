@@ -23,7 +23,32 @@ export class MonksWallEnhancement {
 
         MonksWallEnhancement.SOCKET = "module.monks-wall-enhancement";
 
+        MonksWallEnhancement.tool = { name: 'walls', icon: 'fas fa-bars' };
+
+        MonksWallEnhancement.types = ['walls', 'terrain', 'invisible', 'ethereal', 'doors', 'secret'];
+
         registerSettings();
+
+        if (setting('condense-wall-type')) {
+            let oldClickTool = SceneControls.prototype._onClickTool;
+            SceneControls.prototype._onClickTool = function (event) {
+                const li = event.currentTarget;
+                const control = this.control;
+                const toolName = li.dataset.tool;
+                const tool = control.tools.find(t => t.name === toolName);
+
+                if (control.name == 'walls') {
+                    if (MonksWallEnhancement.types.includes(tool.name)) {
+                        MonksWallEnhancement.tool = tool;
+                        const typebutton = control.tools.find(t => t.name === 'walltype');
+                        typebutton.icon = tool.icon;
+                    } else
+                        $('#controls li[data-tool="walltype"]').toggleClass('active', control.name == 'walltype');
+                }
+
+                return oldClickTool.call(this, event);
+            }
+        }
 
         //Drag points together
         let wallDragStart = function (wrapped, ...args) {
@@ -580,40 +605,82 @@ Hooks.once('init', async function () {
 Hooks.on("ready", MonksWallEnhancement.ready);
 
 Hooks.on("getSceneControlButtons", (controls) => {
+    const wallCtrls = [];
     if (game.settings.get('monks-wall-enhancement', 'show-drag-points-together')) {
-        const dragtogetherTools = [
+        wallCtrls.push(
             {
                 name: "toggledragtogether",
                 title: "Drag points together",
                 icon: "fas fa-project-diagram",
                 toggle: true,
                 active: true
-            },
-            {
-                name: "toggledrawwall",
-                title: "Freehand Draw Wall",
-                icon: "fas fa-signature",
-                toggle: true,
-                active: false
-            },
-            {
-                name: "joinwallpoints",
-                title: "Join Wall Points",
-                icon: "fas fa-broom",
-                button: true,
-                onClick: () => {
-                    MonksWallEnhancement.joinPoints();
-                }
-            }/*,
-            {
-                name: "findwall",
-                title: "Find wall from Point",
-                icon: "fas fa-ruler",
-                toggle: true,
-                active: false
-            }*/
-		];
-        let wallTools = controls.find(control => control.name === "walls").tools;
-        wallTools.splice(wallTools.findIndex(e => e.name === 'clone') + 1, 0, ...dragtogetherTools);
+            }
+        );
+    }
+
+    wallCtrls.push(
+        {
+            name: "toggledrawwall",
+            title: "Freehand Draw Wall",
+            icon: "fas fa-signature",
+            toggle: true,
+            active: false
+        },
+        {
+            name: "joinwallpoints",
+            title: "Join Wall Points",
+            icon: "fas fa-broom",
+            button: true,
+            onClick: () => {
+                MonksWallEnhancement.joinPoints();
+            }
+        }
+    );
+    /*,
+    {
+        name: "findwall",
+        title: "Find wall from Point",
+        icon: "fas fa-ruler",
+        toggle: true,
+        active: false
+    }*/
+    let wallTools = controls.find(control => control.name === "walls").tools;
+    wallTools.splice(wallTools.findIndex(e => e.name === 'clone') + 1, 0, ...wallCtrls);
+        
+    if (setting('condense-wall-type')) {
+        const wallTypeBtn = [{
+            name: "walltype",
+            title: "Draw Walls",
+            icon: MonksWallEnhancement.tool.icon,
+            onClick: () => {
+                //click the button that should be clicked
+                let wallControl = ui.controls.controls.find(e => e.name == 'walls');
+                wallControl.activeTool = MonksWallEnhancement.tool.name;
+                //$('li[data-tool="walltype"]', html).attr('class', MonksWallEnhancement.tool.icon);
+                //$('li[data-tool="' + MonksWallEnhancement.tool.name + '"]', li).click();
+            }
+        }];
+
+        wallTools.splice(wallTools.findIndex(e => e.name === 'select') + 1, 0, ...wallTypeBtn);
+    }
+});
+
+Hooks.on("renderSceneControls", (controls, html) => {
+    if (setting('condense-wall-type')) {
+        if (controls.activeControl == 'walls') {
+            let wallBtn = $('li[data-tool="walltype"]', html);
+
+            let wallTypes = $('<ul>').addClass('control-tools').appendTo($('<div>').attr('id', 'wall-ctrls').appendTo(wallBtn));
+            for (let type of MonksWallEnhancement.types)
+                $('li[data-tool="' + type + '"]', html).appendTo(wallTypes);
+
+            let wallControl = controls.controls.find(e => e.name == 'walls');
+
+            wallBtn.toggleClass('active', MonksWallEnhancement.types.includes(wallControl.activeTool));
+            let pos = wallBtn.position();
+            wallTypes.parent().css({ top: pos.top, left: pos.left + wallBtn.width() });
+        } else {
+            $('#wall-ctrls').remove();
+        }
     }
 });

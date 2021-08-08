@@ -19,8 +19,8 @@ Currently there's a small issue with it, and the draw tool needs to be selected,
 ### Join points
 While having some wall segments selected, it will go throught he points and find ones that are close to each other, and match them up.
 
-### Free hand wall drawing.
-Toggle this setting on and when you draw a wall you can draw it like you would a line.  When you release the button, it will try and find the most economical use of line segments to create the wall.  This is great for cave walls, you can draw along the edge of the cavern image and have a very reasonable approximation.  Some with edges that are circular.
+### Free hand wall drawing
+Toggle this setting on and when you draw a wall you can draw it like you would a line.  When you release the button, it will try and find the most economical use of line segments to create the wall.  This is great for cave walls, you can draw along the edge of the cavern image and have a very reasonable approximation.
 
 ## Bug Reporting
 I'm sure there are lots of issues with it.  It's very much a work in progress.

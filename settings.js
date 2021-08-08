@@ -12,15 +12,25 @@ export const registerSettings = function () {
 		scope: "world",
 		config: true,
 		default: true,
-		type: Boolean,
+		type: Boolean
 	});
 
 	game.settings.register(modulename, "allow-doubleclick", {
-		name: "Allow double click split",
-		hint: "Allow double-clicking on a line to split the wall into two",
+		name: i18n("MonksWallEnhancement.allow-doubleclick.name"),
+		hint: i18n("MonksWallEnhancement.allow-doubleclick.hint"),
 		scope: "world",
 		config: true,
 		default: true,
+		type: Boolean
+	});
+
+	game.settings.register(modulename, "condense-wall-type", {
+		name: i18n("MonksWallEnhancement.condense-wall-type.name"),
+		hint: i18n("MonksWallEnhancement.condense-wall-type.hint"),
+		scope: "world",
+		config: true,
+		default: false,
 		type: Boolean,
+		onChange: debouncedReload
 	});
 };
