@@ -1,3 +1,9 @@
+# Version 1.0.3
+
+Added option to set walls to always use the "Ctrl" key when creating.
+
+Fixed some errors with dropping walls.
+
 # Version 1.0.2
 
 Added option to compress the wall types.  It'll now just take up one button spot, with the other option visible when hovered over.

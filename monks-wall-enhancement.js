@@ -1,4 +1,5 @@
 ﻿import { registerSettings } from "./settings.js";
+import TraceSkeleton from './js/trace_skeleton.js';
 
 export let debug = (...args) => {
     if (debugEnabled > 1) console.log("DEBUG: monks-wall-enhancement | ", ...args);
@@ -59,6 +60,7 @@ export class MonksWallEnhancement {
             let dragtogether = ui.controls.control.tools.find(t => { return t.name == "toggledragtogether" });
             if (dragtogether != undefined && dragtogether.active) {
                 MonksWallEnhancement.dragpoints = [];
+                //find any points that should be dragged with selected point
                 let fixed = event.data.fixed;
                 let oldcoord = (fixed ? this.coords.slice(0, 2) : this.coords.slice(2, 4));
                 if (oldcoord != null) {
@@ -113,7 +115,7 @@ export class MonksWallEnhancement {
             }
         }
 
-        let wallDragDrop = function (wrapped, ...args) {
+        let wallDragDrop = async function (wrapped, ...args) {
             let result = wrapped(...args);
 
             let event = args[0];
@@ -131,7 +133,7 @@ export class MonksWallEnhancement {
                     if ((coords[0] === coords[2]) && (coords[1] === coords[3])) {
                         return dragpoint.wall.document.delete(); // If we collapsed the wall, delete it
                     }
-                    dragpoint.wall.document.update({ c: coords });
+                    await dragpoint.wall.document.update({ c: coords });
                 }
                 MonksWallEnhancement.dragpoints = [];
             }
@@ -154,7 +156,7 @@ export class MonksWallEnhancement {
             const { createState, origin, destination, originalEvent, preview } = event.data;
 
             let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
-            let findwall = ui.controls.control.tools.find(t => { return t.name == "findwall" });
+            let findwall = { active: false }; //ui.controls.control.tools.find(t => { return t.name == "findwall" });
 
             if (drawwall.active && ui.controls.control.activeTool != 'select') {
                 if (MonksWallEnhancement.freehandPts == undefined) {
@@ -166,8 +168,8 @@ export class MonksWallEnhancement {
                     }
                     //MonksWallEnhancement.gr.beginFill(0xff0000).drawCircle(origin.x, origin.y, 4).endFill();
                 } 
-            } //else if (findwall.active)
-              //  MonksWallEnhancement.createLine(origin);    //Find wall from colour
+            } else if (findwall.active)
+                MonksWallEnhancement.createLine(origin);    //Find wall from colour
             else
                 return wrapped(...args);
         }
@@ -224,36 +226,56 @@ export class MonksWallEnhancement {
             const { createState, destination, originalEvent, preview } = event.data;
 
 			let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
-            if (drawwall.active){
+            if (drawwall.active) {
                 let wallpoints = MonksWallEnhancement.simplify(MonksWallEnhancement.freehandPts, 25);
-				const cls = getDocumentClass(this.constructor.documentName);
-				const snap = this._forceSnap || !originalEvent.shiftKey;
-				let docs = [];
+                const cls = getDocumentClass(this.constructor.documentName);
+                const snap = this._forceSnap || !originalEvent.shiftKey;
+                let docs = [];
 
-				for (let i = 0; i < wallpoints.length - 1; i++) {
-					//const gr = new PIXI.Graphics();
-					//gr.beginFill(0x00ff00).drawCircle(wallpoints[i].x, wallpoints[i].y, 4).endFill();
-					
-					if (i < wallpoints.length - 1) {
-						let src = this._getWallEndpointCoordinates({ x: wallpoints[i].x, y: wallpoints[i].y }, { snap });
-						let dest = this._getWallEndpointCoordinates({ x: wallpoints[i + 1].x, y: wallpoints[i + 1].y }, { snap });
-						let coords = src.concat(dest);
-						preview.data.c = coords;
+                for (let i = 0; i < wallpoints.length - 1; i++) {
+                    //const gr = new PIXI.Graphics();
+                    //gr.beginFill(0x00ff00).drawCircle(wallpoints[i].x, wallpoints[i].y, 4).endFill();
 
-						if ((coords[0] === coords[2]) && (coords[1] === coords[3])) continue;
+                    if (i < wallpoints.length - 1) {
+                        let src = this._getWallEndpointCoordinates({ x: wallpoints[i].x, y: wallpoints[i].y }, { snap });
+                        let dest = this._getWallEndpointCoordinates({ x: wallpoints[i + 1].x, y: wallpoints[i + 1].y }, { snap });
+                        let coords = src.concat(dest);
+                        preview.data.c = coords;
 
-						//await cls.create(preview.data.toObject(false), { parent: canvas.scene });
-						docs.push(preview.data.toObject(false));
-					}
-				}
+                        if ((coords[0] === coords[2]) && (coords[1] === coords[3])) continue;
 
-				await cls.createDocuments(docs, { parent: canvas.scene });
+                        //await cls.create(preview.data.toObject(false), { parent: canvas.scene });
+                        docs.push(preview.data.toObject(false));
+                    }
+                }
 
-				this.preview.removeChild(preview);
+                await cls.createDocuments(docs, { parent: canvas.scene });
 
-				return this._onDragLeftCancel(event);
-			}else
-                return wrapped(...args);
+                this.preview.removeChild(preview);
+
+                return this._onDragLeftCancel(event);
+            } else {
+
+                if (setting('default-ctrl'))
+                    args[0].ctrlKey = true;
+
+                let oldSnap = this._forceSnap;
+                let snaptowall = ui.controls.control.tools.find(t => { return t.name == "snaptowall" });
+                if (snaptowall.active) {
+                    //find the closest point.
+                    let pt = MonksWallEnhancement.findClosestPoint(null, destination.x, destination.y);
+                    if (pt) {
+                        destination.x = pt.x;
+                        destination.y = pt.y;
+                        this._forceSnap = false;
+                    }
+                }
+
+                let result = wrapped(...args);
+                this._forceSnap = oldSnap;
+                delete args[0].ctrlKey;
+                return result;
+            }
         }
 
         if (game.modules.get("lib-wrapper")?.active) {
@@ -334,6 +356,28 @@ export class MonksWallEnhancement {
                 return wallLayerClickLeft2.call(this, oldWallLayerClickLeft2.bind(this), ...arguments);
             }
         }
+    }
+
+    static findClosestPoint(id, x, y) {
+        let closestDist;
+        let closestPt = { x: 0, y: 0 };
+        canvas.scene.data.walls.forEach(w => {
+            if (w.id != id) {
+                let dist = Math.sqrt(Math.pow(w.data.c[0] - x, 2) + Math.pow(w.data.c[1] - y, 2));
+                if (closestDist == undefined || dist < closestDist) {
+                    closestDist = dist;
+                    closestPt = { x: w.data.c[0], y: w.data.c[1] };
+                }
+
+                dist = Math.sqrt(Math.pow(w.data.c[2] - x, 2) + Math.pow(w.data.c[3] - y, 2));
+                if (closestDist == undefined || dist < closestDist) {
+                    closestDist = dist;
+                    closestPt = { x: w.data.c[2], y: w.data.c[3] };
+                }
+            }
+        });
+
+        return (closestDist < 5 ? closestPt : null);
     }
 
     static simplify(points, tolerance = 20) {
@@ -501,9 +545,11 @@ export class MonksWallEnhancement {
 
         };
 
+        let dimensions = {};
         let width = 0;
         let height = 0;
         let toCheck = [];
+        let trimPixels = [];
         let checkedPts = {};
         let checkPoint = function (x, y) {
             if (checkedPts[x] == undefined)
@@ -516,6 +562,10 @@ export class MonksWallEnhancement {
                     if (!(tx < 0 || ty < 0 || tx >= width || ty >= height)) {
                         if (pixelArray[ty][tx] == 1) {
                             pixelArray[ty][tx] = 2;
+                            dimensions.x = Math.min(dimensions.x, tx);
+                            dimensions.y = Math.min(dimensions.y, ty);
+                            dimensions.x2 = Math.max(dimensions.x2, tx);
+                            dimensions.y2 = Math.max(dimensions.y2, ty);
                             if (checkedPts[tx] == undefined || checkedPts[tx][ty] == undefined) {   //don't check it if it's already been checked
                                 if (toCheck.find(p => p.x == tx && p.y == ty) == undefined)  //only add it to the list once
                                     toCheck.push({ x: tx, y: ty });
@@ -524,6 +574,29 @@ export class MonksWallEnhancement {
                     }
                 }
             }
+        }
+
+        let fillVoids = function (width, height) {
+            let result = false;
+            for (let j = 0; j <= height; j++) {
+                for (let i = 0; i <= width; i++) {
+                    if (trimPixels[j][i] == 0) {
+                        if (!(j == 0 || j == height || trimPixels[j - 1][i] != 2 || trimPixels[j + 1][i] != 2)) {
+                            log('filling ', j, i);
+                            trimPixels[j][i] = 2;   //fill voids
+                            result = true;
+                        }
+
+                        if (!(i == 0 || i == width || trimPixels[j][i - 1] != 2 || trimPixels[j][i + 1] != 2)) {
+                            log('filling ', j, i);
+                            trimPixels[j][i] = 2;   //fill voids
+                            result = true;
+                        }
+                    }
+                }
+            }
+
+            return result;
         }
 
         MonksWallEnhancement.gr = new PIXI.Graphics();
@@ -564,6 +637,7 @@ export class MonksWallEnhancement {
                     }
 
                     //find all pixels that are attached
+                    dimensions = { x: pt.x, y: pt.y, x2: pt.x, y2: pt.y };
                     pixelArray[pt.y][pt.x] = 2;
                     checkedPts[pt.x] = {};
                     checkedPts[pt.x][pt.y] = true;
@@ -573,22 +647,51 @@ export class MonksWallEnhancement {
                         checkPoint(point.x, point.y);
                     }
 
-                    for (let i = 0; i < width; i++) {
-                        for (let j = 0; j < height; j++) {
-                            if (pixelArray[j][i] == 1)
-                                pixelArray[j][i] = 0;
+                    //now that we know the dimensions, we can trim down the data
+                    for (let j = dimensions.y; j <= dimensions.y2; j++) {
+                        trimPixels.push(pixelArray[j].slice(dimensions.x, dimensions.x2 + 1));
+                    }
 
-                            if (pixelArray[j][i] == 2)
-                                //MonksWallEnhancement.gr.beginFill(0xff0000).drawCircle(i - offsetX, j - offsetY, 4).endFill();
-                                MonksWallEnhancement.gr.beginFill(0xff0000).drawRect(i - offsetX, j - offsetY, 1, 1).endFill();
+                    let tw = (dimensions.x2 - dimensions.x);
+                    let th = (dimensions.y2 - dimensions.y);
+
+                    //remove all disconnected pixels
+                    for (let j = 0; j <= th; j++) {
+                        for (let i = 0; i <= tw; i++) {
+                            if (trimPixels[j][i] == 1)
+                                trimPixels[j][i] = 0;
                         }
                     }
 
-                    //start at the original point, and try and walk the path
-                    let points = [{ x: pt.x, y: pt.y }];
-                    //find possible paths
+                    log(trimPixels);
+                    while (fillVoids(tw, th)) {
+                        //keep looping until all voids are filled.
+                        log(trimPixels);
+                        log('voids filled');
+                    }
 
+                    let finalPixels = [];
+                    for (let j = 0; j <= th; j++) {
+                        finalPixels = finalPixels.concat(trimPixels[j]);
+                    }
 
+                    //skeletonize
+                    let result = TraceSkeleton.fromBoolArray(finalPixels, tw + 1, th + 1);
+                    log(result);
+
+                    for (let i = 0; i <= tw; i++) {
+                        for (let j = 0; j <= th; j++) {
+                            if (trimPixels[j][i] == 2)
+                                //MonksWallEnhancement.gr.beginFill(0xff0000).drawCircle(i - offsetX, j - offsetY, 4).endFill();
+                                MonksWallEnhancement.gr.lineStyle(1, 0xff0000).beginFill(0xff0000).drawRect(i - offsetX + dimensions.x, j - offsetY + dimensions.y, 1, 1).endFill();
+                        }
+                    }
+
+                    //follow path from original spot
+                    for (let polyline of result.polylines) {
+                        MonksWallEnhancement.gr.lineStyle(1, 0x00ff00).beginFill(0x00ff00).drawCircle(polyline[0][0] - offsetX + dimensions.x, polyline[0][1] - offsetY + dimensions.y, 2).drawCircle(polyline[1][0] - offsetX + dimensions.x, polyline[1][1] - offsetY + dimensions.y, 2).endFill();
+                        MonksWallEnhancement.gr.lineStyle(1, 0x00ff00).moveTo(polyline[0][0] - offsetX + dimensions.x, polyline[0][1] - offsetY + dimensions.y).lineTo(polyline[1][0] - offsetX + dimensions.x, polyline[1][1] - offsetY + dimensions.y);
+                    }
                 }
             })
         }
@@ -634,16 +737,23 @@ Hooks.on("getSceneControlButtons", (controls) => {
             onClick: () => {
                 MonksWallEnhancement.joinPoints();
             }
+        },
+        /*{
+            name: "findwall",
+            title: "Find wall from Point",
+            icon: "fas fa-ruler",
+            toggle: true,
+            active: false
+        },*/
+        {
+            name: "snaptowall",
+            title: "Snap To Point",
+            icon: "fas fa-plus-circle",
+            toggle: true,
+            active: false
         }
     );
-    /*,
-    {
-        name: "findwall",
-        title: "Find wall from Point",
-        icon: "fas fa-ruler",
-        toggle: true,
-        active: false
-    }*/
+    
     let wallTools = controls.find(control => control.name === "walls").tools;
     wallTools.splice(wallTools.findIndex(e => e.name === 'clone') + 1, 0, ...wallCtrls);
         

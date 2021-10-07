@@ -33,4 +33,13 @@ export const registerSettings = function () {
 		type: Boolean,
 		onChange: debouncedReload
 	});
+
+	game.settings.register(modulename, "default-ctrl", {
+		name: i18n("MonksWallEnhancement.default-ctrl.name"),
+		hint: i18n("MonksWallEnhancement.default-ctrl.hint"),
+		scope: "world",
+		config: true,
+		default: false,
+		type: Boolean
+	});
 };
