@@ -42,4 +42,13 @@ export const registerSettings = function () {
 		default: false,
 		type: Boolean
 	});
+
+	game.settings.register(modulename, "simplify-distance", {
+		name: i18n("MonksWallEnhancement.simplify-distance.name"),
+		hint: i18n("MonksWallEnhancement.simplify-distance.hint"),
+		scope: "world",
+		config: true,
+		default: 25,
+		type: Number
+	});
 };

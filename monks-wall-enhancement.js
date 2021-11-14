@@ -30,6 +30,58 @@ export class MonksWallEnhancement {
 
         registerSettings();
 
+        /*
+        let sceneConfigUpdate = async function (wrapped, ...args) {
+            let [event, formData] = args;
+            const scene = this.document;
+            let { width, height, padding, shiftX, shiftY, size } = scene.data;
+            const delta = foundry.utils.diffObject(scene.data, formData);
+
+            let result = await wrapped(...args);
+
+            if (result == undefined)
+                return result;
+
+            if (scene.walls.size > 0 && ["width", "height", "padding", "shiftX", "shiftY", "size"].some(k => k in delta)) {
+                const confirm = await Dialog.confirm({
+                    title: "Adjust walls",
+                    content: `<p>Monk's Wall Enhancements can attempt to shift the walls for you to match the changes made to the map and keep the walls in the original position.  Would you like to do that?</p>`
+                });
+
+                if (confirm) {
+                    let updates = [];
+                    let moveX = (delta.shiftX ? -delta.shiftX : 0);
+                    let moveY = (delta.shiftY ? -delta.shiftY : 0);
+                    let adjustX = (delta.width ? (delta.width / width) : 1);
+                    let adjustY = (delta.height ? (delta.height / height) : 1);
+
+                    for (let wall of scene.walls) {
+                        updates.push({
+                            _id: wall.id, c: [
+                                (wall.data.c[0] * adjustX) + moveX,
+                                (wall.data.c[1] * adjustY) + moveY,
+                                (wall.data.c[2] * adjustX) + moveX,
+                                (wall.data.c[3] * adjustY) + moveY]
+                        });
+                    }
+
+                    const cls = getDocumentClass(canvas.walls.constructor.documentName);
+                    cls.updateDocuments(updates, { parent: scene });
+                }
+            }
+
+            return result;
+        }
+
+        if (game.modules.get("lib-wrapper")?.active) {
+            libWrapper.register("monks-wall-enhancement", "SceneConfig.prototype._updateObject", sceneConfigUpdate, "WRAPPER");
+        } else {
+            const oldSceneConfigUpdate = SceneConfig.prototype._updateObject;
+            SceneConfig.prototype._updateObject = function (event) {
+                return sceneConfigUpdate.call(this, oldSceneConfigUpdate.bind(this), ...arguments);
+            }
+        }*/
+
         if (setting('condense-wall-type')) {
             let oldClickTool = SceneControls.prototype._onClickTool;
             SceneControls.prototype._onClickTool = function (event) {
@@ -116,7 +168,7 @@ export class MonksWallEnhancement {
         }
 
         let wallDragDrop = async function (wrapped, ...args) {
-            let result = wrapped(...args);
+            let result = await wrapped(...args);
 
             let event = args[0];
 
@@ -127,6 +179,7 @@ export class MonksWallEnhancement {
             const pt = this.layer._getWallEndpointCoordinates(destination, { snap });
 
             if (clones.length === 1 && MonksWallEnhancement.dragpoints?.length > 0) {
+                let history = layer.history[layer.history.length - 1];
                 for (let dragpoint of MonksWallEnhancement.dragpoints) {
                     const p0 = dragpoint.fixed ? dragpoint.wall.coords.slice(2, 4) : dragpoint.wall.coords.slice(0, 2);
                     const coords = dragpoint.fixed ? pt.concat(p0) : p0.concat(pt);
@@ -134,7 +187,10 @@ export class MonksWallEnhancement {
                         return dragpoint.wall.document.delete(); // If we collapsed the wall, delete it
                     }
                     await dragpoint.wall.document.update({ c: coords });
+                    let change = layer.history.pop();
+                    history.data = history.data.concat(change.data);
                 }
+
                 MonksWallEnhancement.dragpoints = [];
             }
 
@@ -227,7 +283,7 @@ export class MonksWallEnhancement {
 
 			let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
             if (drawwall.active) {
-                let wallpoints = MonksWallEnhancement.simplify(MonksWallEnhancement.freehandPts, 25);
+                let wallpoints = MonksWallEnhancement.simplify(MonksWallEnhancement.freehandPts, setting("simplify-distance"));
                 const cls = getDocumentClass(this.constructor.documentName);
                 const snap = this._forceSnap || !originalEvent.shiftKey;
                 let docs = [];
@@ -697,8 +753,78 @@ export class MonksWallEnhancement {
         }
     }
 
+    static async convertDrawings() {
+        //get the selected drawings, get the points, and make walls from them.
+        //If it's a circle then we'll need to put together some points proper.
+        log('Convert walls');
+
+        const cls = getDocumentClass("Wall");
+
+        for (let drawing of canvas.drawings.controlled) {
+            let docs = [];
+            let wallpoints = [];
+
+            let wd = {
+                dir: 0, door: 0, ds: 0, move: 1, sense: 1, sound: 1
+            };
+
+            if (drawing.data?.flags?.levels)
+                wd.flags = { 'levels': drawing.data?.flags?.levels };
+
+            let size = drawing.data.strokeWidth / 2;
+
+            switch (drawing.data.type) {
+                case 'f':   //freehand
+                    //[{x:,y:}]
+                    wallpoints = MonksWallEnhancement.simplify(drawing.data.points.map(p => { return { x: drawing.data.x + p[0], y: drawing.data.y + p[1] }; }), 10);
+                    break;
+                case 'r': //rect
+                    wallpoints = [
+                        { x: drawing.data.x + size, y: drawing.data.y + size },
+                        { x: drawing.data.x + drawing.data.width - size, y: drawing.data.y + size },
+                        { x: drawing.data.x + drawing.data.width - size, y: drawing.data.y + drawing.data.height - size },
+                        { x: drawing.data.x + size, y: drawing.data.y + drawing.data.height - size },
+                        { x: drawing.data.x + size, y: drawing.data.y + size }
+                    ];
+                    break;
+                case 'e': //circle
+                    //drawing.data.x, drawing.data.y, drawing.data.width
+                    let circlePts = [];
+                    let a = drawing.data.width / 2;
+                    let b = drawing.data.height / 2;
+                    let pos = { x: drawing.data.x + a, y: drawing.data.y + b };
+                    for (let i = 0; i <= Math.PI / 2; i = i + 0.2) {
+                        let x = ((a * b) / Math.sqrt((b ** 2) + ((a ** 2) * (Math.tan(i) ** 2))));
+                        let y = ((a * b) / Math.sqrt((a ** 2) + ((b ** 2) / (Math.tan(i) ** 2))));
+                        circlePts.push({ x: x, y: y});
+                    }
+                    circlePts = circlePts.concat(duplicate(circlePts).reverse().map(p => { return { x: -p.x, y: p.y }; }));
+                    circlePts = circlePts.concat(duplicate(circlePts).reverse().map(p => { return { x: p.x, y: -p.y }; }));
+                    wallpoints = MonksWallEnhancement.simplify(circlePts.map(p => { return { x: p.x + pos.x, y: p.y + pos.y} }), 10);
+                    break;
+                case 'p': //polygon
+                    //drawing.data.points
+                    wallpoints = drawing.data.points.map(p => { return { x: drawing.data.x + p[0], y: drawing.data.y + p[1] }; });
+                    break;
+            }
+
+            for (let i = 0; i < wallpoints.length - 1; i++) {
+                if (i < wallpoints.length - 1) {
+                    wd.c = [wallpoints[i].x, wallpoints[i].y, wallpoints[i + 1].x, wallpoints[i + 1].y];
+                    docs.push(duplicate(wd));
+                }
+            }
+
+            await cls.createDocuments(docs, { parent: canvas.scene });
+        }
+
+        const clsDraw = getDocumentClass("Drawing");
+        clsDraw.deleteDocuments(canvas.drawings.controlled.map(d => d.id), { parent: canvas.scene });
+
+        canvas["walls"].activate();
+    }
+
     static ready() {
-        
     }
 }
 Hooks.once('init', async function () {
@@ -773,6 +899,19 @@ Hooks.on("getSceneControlButtons", (controls) => {
 
         wallTools.splice(wallTools.findIndex(e => e.name === 'select') + 1, 0, ...wallTypeBtn);
     }
+
+    let drawingTools = controls.find(control => control.name === "drawings").tools;
+
+    const convertToWalls = [{
+        name: "converttowalls",
+        title: "Convert To Walls",
+        icon: "fas fa-university",
+        toggle: false,
+        button:true,
+        active: true,
+        onClick: MonksWallEnhancement.convertDrawings
+    }];
+    drawingTools.splice(drawingTools.findIndex(e => e.name === 'clear'), 0, ...convertToWalls);
 });
 
 Hooks.on("renderSceneControls", (controls, html) => {

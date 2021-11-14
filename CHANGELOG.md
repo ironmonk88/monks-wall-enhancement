@@ -1,3 +1,11 @@
+# Version 1.0.4
+
+Added the option to convert drawings to walls.
+
+Added a setting so you can change the tollerance when freehand drawing a wall
+
+Fixed the undo feature so any joined points will also be included when the change is undone.
+
 # Version 1.0.3
 
 Added option to set walls to always use the "Ctrl" key when creating.

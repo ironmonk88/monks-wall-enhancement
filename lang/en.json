@@ -6,6 +6,7 @@
 	"MonksWallEnhancement.condense-wall-type.name": "Condense Wall Types",
 	"MonksWallEnhancement.condense-wall-type.hint": "Condense Wall Types to a single toggle button that can be changed.",
 	"MonksWallEnhancement.default-ctrl.name": "Default CTRL",
-	"MonksWallEnhancement.default-ctrl.hint": "Default to using the ctrl key when creating walls"
-
+	"MonksWallEnhancement.default-ctrl.hint": "Default to using the ctrl key when creating walls",
+	"MonksWallEnhancement.simplify-distance.name": "Freehand Tollerance",
+	"MonksWallEnhancement.simplify-distance.hint": "Tollerance to use when using the freehand wall tool"
 }
