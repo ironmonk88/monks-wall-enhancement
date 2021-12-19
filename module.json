@@ -38,7 +38,5 @@
 	"download": "https://github.com/ironmonk88/monks-wall-enhancement/archive/1.0.5.zip",
 	"manifest": "https://github.com/ironmonk88/monks-wall-enhancement/releases/latest/download/module.json",
 	"bugs": "https://github.com/ironmonk88/monks-wall-enhancement/issues",
-	"allowBugReporter": true,
-	"minimumCoreVersion": "0.8.0",
-	"compatibleCoreVersion": "0.8.9"
+	"allowBugReporter": true
 }
