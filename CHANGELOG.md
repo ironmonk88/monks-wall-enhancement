@@ -1,3 +1,7 @@
+# Version 1.0.5
+
+Adding v9 support, just some styling changes, nothing major.
+
 # Version 1.0.4
 
 Added the option to convert drawings to walls.

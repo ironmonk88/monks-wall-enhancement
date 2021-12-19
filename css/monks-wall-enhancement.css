@@ -10,7 +10,9 @@
     width: 0px;
     overflow: hidden;
     transition: width 0.2s ease-in;
-    margin-left:10px;
+    margin-left: 10px;
+    padding-left: 0px;
+    margin-top: 0px;
 }
 
 #wall-ctrls ul li {
