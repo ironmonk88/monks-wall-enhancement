@@ -1,3 +1,7 @@
+# Version 1.0.6
+
+Fixed an issue with double-click to split a wall
+
 # Version 1.0.5
 
 Adding v9 support, just some styling changes, nothing major.

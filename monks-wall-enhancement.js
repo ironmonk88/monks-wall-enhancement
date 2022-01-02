@@ -394,7 +394,7 @@ export class MonksWallEnhancement {
                         let newwall = duplicate(wall.data);
                         delete newwall._id;
                         newwall.c = [point.x, point.y].concat(newwall.c.slice(2, 4));
-                        await wall.update({ c: wall.coords.slice(0, 2).concat([point.x, point.y]) });
+                        await wall.document.update({ c: wall.coords.slice(0, 2).concat([point.x, point.y]) });
                         await cls.createDocuments([newwall], { parent: canvas.scene });
                     }
                 }
