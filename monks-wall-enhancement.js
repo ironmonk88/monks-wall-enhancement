@@ -216,6 +216,38 @@ export class MonksWallEnhancement {
             }
         }
 
+        //Snap to point
+        let wallLayerDragLeftStart = async function (wrapped, ...args) {
+            let event = args[0];
+            const { origin } = event.data;
+
+            let oldSnap = this._forceSnap;
+            let snaptowall = ui.controls.control.tools.find(t => { return t.name == "snaptowall" });
+            if (snaptowall.active) {
+                //find the closest point.
+                let pt = MonksWallEnhancement.findClosestPoint(null, origin.x, origin.y);
+                if (pt) {
+                    origin.x = pt.x;
+                    origin.y = pt.y;
+                    this._forceSnap = false;
+                }
+            }
+
+            let result = await wrapped(...args);
+            this._forceSnap = oldSnap;
+            
+            return result;
+        }
+
+        if (game.modules.get("lib-wrapper")?.active) {
+            libWrapper.register("monks-wall-enhancement", "WallsLayer.prototype._onDragLeftStart", wallLayerDragLeftStart, "MIXED");
+        } else {
+            const oldWallDragLeftStart = WallsLayer.prototype._onDragLeftStart;
+            WallsLayer.prototype._onDragLeftStart = function (event) {
+                return wallLayerDragLeftStart.call(this, oldWallDragLeftStart.bind(this), ...arguments);
+            }
+        }
+
         //Freehand draw wall
         let wallLayerLeftClick = async function (wrapped, ...args) {
             let event = args[0];
@@ -232,7 +264,15 @@ export class MonksWallEnhancement {
                         MonksWallEnhancement.gr = new PIXI.Graphics();
                         this.addChild(MonksWallEnhancement.gr);
                     }
-                    //MonksWallEnhancement.gr.beginFill(0xff0000).drawCircle(origin.x, origin.y, 4).endFill();
+
+                    const tool = game.activeTool;
+                    const data = this._getWallDataFromActiveTool(tool);
+                    if (data.sight === CONST.WALL_SENSE_TYPES.NONE) MonksWallEnhancement.wallColor =  0x77E7E8;
+                    else if (data.sight === CONST.WALL_SENSE_TYPES.LIMITED) MonksWallEnhancement.wallColor =  0x81B90C;
+                    else if (data.move === CONST.WALL_SENSE_TYPES.NONE) MonksWallEnhancement.wallColor =  0xCA81FF;
+                    else if (data.door === CONST.WALL_DOOR_TYPES.DOOR) MonksWallEnhancement.wallColor =  0x6666EE;
+                    else if (data.door === CONST.WALL_DOOR_TYPES.SECRET) MonksWallEnhancement.wallColor =  0xA612D4;
+                    else MonksWallEnhancement.wallColor =  0xFFFFBB;
                 } 
             } else if (findwall.active)
                 MonksWallEnhancement.createLine(origin);    //Find wall from colour
@@ -271,7 +311,7 @@ export class MonksWallEnhancement {
                     let dist = Math.sqrt(Math.pow(prevPt.x - destination.x, 2) + Math.pow(prevPt.y - destination.y, 2));
 					if (dist > MonksWallEnhancement.distanceCheck) {
                         MonksWallEnhancement.freehandPts.push({ x: destination.x, y: destination.y });
-                        MonksWallEnhancement.gr.lineStyle(2, 0xff0000).moveTo(prevPt.x, prevPt.y).lineTo(destination.x, destination.y);
+                        MonksWallEnhancement.gr.lineStyle(3, MonksWallEnhancement.wallColor).moveTo(prevPt.x, prevPt.y).lineTo(destination.x, destination.y);
 					}
 				}
 			}else

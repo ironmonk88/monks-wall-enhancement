@@ -1,10 +1,16 @@
+# Version 1.0.8
+
+Fixed issue with snapping to a point when starting a line
+
+And changed the freehand line colour to match the type of wall being drawn.
+
 # Version 1.0.7
 
 Fixed issue when snapping to the closest point.
 
 Fixed issues with double-click to split wall
 
-Added optin to hold down CTRL and right click to toggle a door being secret.
+Added option to hold down CTRL and right click to toggle a door being secret.
 
 Had to remove the option of swapping the hold down CTRL to continue drawing a wall option.  With changes to v9 it just wasn't possible to do tha any more.  I'm hoping witht he freehand draw wall option that this is a bit of a moot point as that function can mostly replace it.
 
