@@ -168,13 +168,23 @@ export class MonksWallEnhancement {
         }
 
         let wallDragDrop = async function (wrapped, ...args) {
-            let result = await wrapped(...args);
-
             let event = args[0];
 
             const { clones, destination, fixed, originalEvent } = event.data;
             const layer = this.layer;
             const snap = layer._forceSnap || !originalEvent.shiftKey;
+
+            let snaptowall = ui.controls.control.tools.find(t => { return t.name == "snaptowall" });
+            if (snaptowall.active && !snap) {
+                //find the closest point.
+                let closestPt = MonksWallEnhancement.findClosestPoint(null, destination.x, destination.y);
+                if (closestPt) {
+                    destination.x = closestPt.x;
+                    destination.y = closestPt.y;
+                }
+            }
+
+            let result = await wrapped(...args);
 
             const pt = this.layer._getWallEndpointCoordinates(destination, { snap });
 
@@ -311,10 +321,6 @@ export class MonksWallEnhancement {
 
                 return this._onDragLeftCancel(event);
             } else {
-
-                if (setting('default-ctrl'))
-                    args[0].ctrlKey = true;
-
                 let oldSnap = this._forceSnap;
                 let snaptowall = ui.controls.control.tools.find(t => { return t.name == "snaptowall" });
                 if (snaptowall.active) {
@@ -327,10 +333,15 @@ export class MonksWallEnhancement {
                     }
                 }
 
-                let result = wrapped(...args);
+                let result = await wrapped(...args);
                 this._forceSnap = oldSnap;
-                delete args[0].ctrlKey;
-                return result;
+                /*
+                if (setting('default-ctrl')) {
+                    this._chain = true;
+                    event.data.origin = { x: destination.x, y: destination.y };
+                    return this._onDragLeftStart(event);
+                }else*/
+                    return result;
             }
         }
 
@@ -369,9 +380,14 @@ export class MonksWallEnhancement {
             if (setting('allow-doubleclick') && origin) {
                 //check to see that I'm somewhere on the line
                 let hasWall = false;
-                for (let wall of this.controlled) {
+                for (let wall of this.placeables) {
                     let a = { x: wall.coords[0], y: wall.coords[1] };
                     let b = { x: wall.coords[2], y: wall.coords[3] };
+
+                    if (Math.hypot(a.x - origin.x, a.y - origin.y) < 20)
+                        continue;
+                    if (Math.hypot(b.x - origin.x, b.y - origin.y) < 20)
+                        continue;
 
                     var atob = { x: b.x - a.x, y: b.y - a.y };
                     var atop = { x: origin.x - a.x, y: origin.y - a.y };
@@ -412,6 +428,25 @@ export class MonksWallEnhancement {
                 return wallLayerClickLeft2.call(this, oldWallLayerClickLeft2.bind(this), ...arguments);
             }
         }
+
+        if (setting("toggle-secret")) {
+            DoorControl.prototype._onRightDown = function (event) {
+                event.stopPropagation();
+                if (!game.user.isGM) return;
+                let state = this.wall.data.ds,
+                    door = this.wall.data.door,
+                    states = CONST.WALL_DOOR_STATES,
+                    types = CONST.WALL_DOOR_TYPES;
+                if (state === states.OPEN) return;
+                if (event.data.originalEvent.ctrlKey) {
+                    door = door === types.SECRET ? types.DOOR : types.SECRET;
+                    return this.wall.document.update({ door: door });
+                } else {
+                    state = state === states.LOCKED ? states.CLOSED : states.LOCKED;
+                    return this.wall.document.update({ ds: state });
+                }
+            }
+        }
     }
 
     static findClosestPoint(id, x, y) {
@@ -433,7 +468,7 @@ export class MonksWallEnhancement {
             }
         });
 
-        return (closestDist < 5 ? closestPt : null);
+        return (closestDist < 10 ? closestPt : null);
     }
 
     static simplify(points, tolerance = 20) {

@@ -33,7 +33,7 @@ export const registerSettings = function () {
 		type: Boolean,
 		onChange: debouncedReload
 	});
-
+	/*
 	game.settings.register(modulename, "default-ctrl", {
 		name: i18n("MonksWallEnhancement.default-ctrl.name"),
 		hint: i18n("MonksWallEnhancement.default-ctrl.hint"),
@@ -41,7 +41,7 @@ export const registerSettings = function () {
 		config: true,
 		default: false,
 		type: Boolean
-	});
+	});*/
 
 	game.settings.register(modulename, "simplify-distance", {
 		name: i18n("MonksWallEnhancement.simplify-distance.name"),
@@ -50,5 +50,15 @@ export const registerSettings = function () {
 		config: true,
 		default: 25,
 		type: Number
+	});
+
+	game.settings.register(modulename, "toggle-secret", {
+		name: i18n("MonksWallEnhancement.toggle-secret.name"),
+		hint: i18n("MonksWallEnhancement.toggle-secret.hint"),
+		scope: "world",
+		config: true,
+		default: false,
+		type: Boolean,
+		onChange: debouncedReload
 	});
 };
