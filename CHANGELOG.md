@@ -1,3 +1,7 @@
+# Version 1.0.9
+
+Fixed issue players having access to the convert to wall tool in the drawing tools.
+
 # Version 1.0.8
 
 Fixed issue with snapping to a point when starting a line

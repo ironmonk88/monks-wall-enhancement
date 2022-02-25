@@ -975,18 +975,20 @@ Hooks.on("getSceneControlButtons", (controls) => {
         wallTools.splice(wallTools.findIndex(e => e.name === 'select') + 1, 0, ...wallTypeBtn);
     }
 
-    let drawingTools = controls.find(control => control.name === "drawings").tools;
+    if (game.user.isGM) {
+        let drawingTools = controls.find(control => control.name === "drawings").tools;
 
-    const convertToWalls = [{
-        name: "converttowalls",
-        title: "Convert To Walls",
-        icon: "fas fa-university",
-        toggle: false,
-        button:true,
-        active: true,
-        onClick: MonksWallEnhancement.convertDrawings
-    }];
-    drawingTools.splice(drawingTools.findIndex(e => e.name === 'clear'), 0, ...convertToWalls);
+        const convertToWalls = [{
+            name: "converttowalls",
+            title: "Convert To Walls",
+            icon: "fas fa-university",
+            toggle: false,
+            button: true,
+            active: true,
+            onClick: MonksWallEnhancement.convertDrawings
+        }];
+        drawingTools.splice(drawingTools.findIndex(e => e.name === 'clear'), 0, ...convertToWalls);
+    }
 });
 
 Hooks.on("renderSceneControls", (controls, html) => {
