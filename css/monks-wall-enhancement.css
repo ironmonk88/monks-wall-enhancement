@@ -4,7 +4,7 @@
     height:40px;
 }
 
-#controls #wall-ctrls ul.control-tools {
+#controls #wall-ctrls ol.control-tools {
     top: 0px;
     left: 0px;
     width: 0px;
@@ -15,10 +15,11 @@
     margin-top: 0px;
 }
 
-#wall-ctrls ul li {
+#wall-ctrls ol li {
     display: inline-block;
 }
 
-#controls li[data-tool="walltype"]:hover #wall-ctrls ul {
+#controls li[data-tool="walltype"]:hover #wall-ctrls ol {
     width: 40px;
+    pointer-events: all;
 }

@@ -1,3 +1,7 @@
+# Version 1.0.10
+
+Adding v10 support.
+
 # Version 1.0.9
 
 Fixed issue players having access to the convert to wall tool in the drawing tools.

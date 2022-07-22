@@ -116,12 +116,12 @@ export class MonksWallEnhancement {
                 let fixed = event.data.fixed;
                 let oldcoord = (fixed ? this.coords.slice(0, 2) : this.coords.slice(2, 4));
                 if (oldcoord != null) {
-                    this.scene.data.walls.forEach(w => {
+                    this.scene.walls.forEach(w => {
                         if (w.id != this.id) {
-                            if (w.data.c[0] == oldcoord[0] && w.data.c[1] == oldcoord[1])
+                            if (w.c[0] == oldcoord[0] && w.c[1] == oldcoord[1])
                                 //scene.updateEmbeddedEntity("Wall", { c: [oldcoord[2], oldcoord[3], w.c[2], w.c[3]], _id: w._id }, { ignore: true });
                                 MonksWallEnhancement.dragpoints.push({ wall: w.object, fixed: 1 });
-                            else if (w.data.c[2] == oldcoord[0] && w.data.c[3] == oldcoord[1])
+                            else if (w.c[2] == oldcoord[0] && w.c[3] == oldcoord[1])
                                 //scene.updateEmbeddedEntity("Wall", { c: [w.c[0], w.c[1], oldcoord[2], oldcoord[3]], _id: w._id }, { ignore: true });
                                 MonksWallEnhancement.dragpoints.push({ wall: w.object, fixed: 0 });
                         }
@@ -149,7 +149,7 @@ export class MonksWallEnhancement {
                 for (let dragpoint of MonksWallEnhancement.dragpoints) {
                     const w = dragpoint.wall;
                     const pt = [destination.x, destination.y];
-                    w.data.c = dragpoint.fixed ? pt.concat(w.coords.slice(2, 4)) : w.coords.slice(0, 2).concat(pt);
+                    w.document.c = dragpoint.fixed ? pt.concat(w.coords.slice(2, 4)) : w.coords.slice(0, 2).concat(pt);
                     w._hover = false;
                     w.refresh();
                 }
@@ -346,12 +346,12 @@ export class MonksWallEnhancement {
                         let src = this._getWallEndpointCoordinates({ x: wallpoints[i].x, y: wallpoints[i].y }, { snap });
                         let dest = this._getWallEndpointCoordinates({ x: wallpoints[i + 1].x, y: wallpoints[i + 1].y }, { snap });
                         let coords = src.concat(dest);
-                        preview.data.c = coords;
+                        preview.document.c = coords;
 
                         if ((coords[0] === coords[2]) && (coords[1] === coords[3])) continue;
 
                         //await cls.create(preview.data.toObject(false), { parent: canvas.scene });
-                        docs.push(preview.data.toObject(false));
+                        docs.push(preview.document.toObject(false));
                     }
                 }
 
@@ -447,7 +447,7 @@ export class MonksWallEnhancement {
                         //split the wall
                         hasWall = true;
                         const cls = getDocumentClass(this.constructor.documentName);
-                        let newwall = duplicate(wall.data);
+                        let newwall = wall.document.toObject(false);
                         delete newwall._id;
                         newwall.c = [point.x, point.y].concat(newwall.c.slice(2, 4));
                         await wall.document.update({ c: wall.coords.slice(0, 2).concat([point.x, point.y]) });
@@ -473,8 +473,8 @@ export class MonksWallEnhancement {
             DoorControl.prototype._onRightDown = function (event) {
                 event.stopPropagation();
                 if (!game.user.isGM) return;
-                let state = this.wall.data.ds,
-                    door = this.wall.data.door,
+                let state = this.wall.ds,
+                    door = this.wall.door,
                     states = CONST.WALL_DOOR_STATES,
                     types = CONST.WALL_DOOR_TYPES;
                 if (state === states.OPEN) return;
@@ -492,18 +492,18 @@ export class MonksWallEnhancement {
     static findClosestPoint(id, x, y) {
         let closestDist;
         let closestPt = { x: 0, y: 0 };
-        canvas.scene.data.walls.forEach(w => {
+        canvas.scene.walls.forEach(w => {
             if (w.id != id) {
-                let dist = Math.sqrt(Math.pow(w.data.c[0] - x, 2) + Math.pow(w.data.c[1] - y, 2));
+                let dist = Math.sqrt(Math.pow(w.document.c[0] - x, 2) + Math.pow(w.document.c[1] - y, 2));
                 if (closestDist == undefined || dist < closestDist) {
                     closestDist = dist;
-                    closestPt = { x: w.data.c[0], y: w.data.c[1] };
+                    closestPt = { x: w.document.c[0], y: w.document.c[1] };
                 }
 
-                dist = Math.sqrt(Math.pow(w.data.c[2] - x, 2) + Math.pow(w.data.c[3] - y, 2));
+                dist = Math.sqrt(Math.pow(w.document.c[2] - x, 2) + Math.pow(w.document.c[3] - y, 2));
                 if (closestDist == undefined || dist < closestDist) {
                     closestDist = dist;
-                    closestPt = { x: w.data.c[2], y: w.data.c[3] };
+                    closestPt = { x: w.document.c[2], y: w.document.c[3] };
                 }
             }
         });
@@ -840,34 +840,35 @@ export class MonksWallEnhancement {
             let wallpoints = [];
 
             let wd = {
-                dir: 0, door: 0, ds: 0, move: 1, sense: 1, sound: 1
+                dir: CONST.WALL_DIRECTIONS.BOTH,
+                door: CONST.WALL_DOOR_TYPES.NONE,
+                ds: CONST.WALL_DOOR_STATES.CLOSED,
+                move: CONST.WALL_MOVEMENT_TYPES.NORMAL,
+                light: CONST.WALL_SENSE_TYPES.NORMAL,
+                sight: CONST.WALL_SENSE_TYPES.NORMAL,
+                sound: CONST.WALL_SENSE_TYPES.NORMAL
             };
 
-            if (drawing.data?.flags?.levels)
-                wd.flags = { 'levels': drawing.data?.flags?.levels };
+            if (drawing.flags?.levels)
+                wd.flags = { 'levels': drawing.flags?.levels };
 
-            let size = drawing.data.strokeWidth / 2;
+            let size = drawing.document.strokeWidth / 2;
 
-            switch (drawing.data.type) {
-                case 'f':   //freehand
-                    //[{x:,y:}]
-                    wallpoints = MonksWallEnhancement.simplify(drawing.data.points.map(p => { return { x: drawing.data.x + p[0], y: drawing.data.y + p[1] }; }), 10);
-                    break;
+            switch (drawing.type) {
                 case 'r': //rect
                     wallpoints = [
-                        { x: drawing.data.x + size, y: drawing.data.y + size },
-                        { x: drawing.data.x + drawing.data.width - size, y: drawing.data.y + size },
-                        { x: drawing.data.x + drawing.data.width - size, y: drawing.data.y + drawing.data.height - size },
-                        { x: drawing.data.x + size, y: drawing.data.y + drawing.data.height - size },
-                        { x: drawing.data.x + size, y: drawing.data.y + size }
+                        { x: drawing.x + size, y: drawing.y + size },
+                        { x: drawing.x + drawing.width - size, y: drawing.y + size },
+                        { x: drawing.x + drawing.width - size, y: drawing.y + drawing.height - size },
+                        { x: drawing.x + size, y: drawing.y + drawing.height - size },
+                        { x: drawing.x + size, y: drawing.y + size }
                     ];
                     break;
                 case 'e': //circle
-                    //drawing.data.x, drawing.data.y, drawing.data.width
                     let circlePts = [];
-                    let a = drawing.data.width / 2;
-                    let b = drawing.data.height / 2;
-                    let pos = { x: drawing.data.x + a, y: drawing.data.y + b };
+                    let a = drawing.width / 2;
+                    let b = drawing.height / 2;
+                    let pos = { x: drawing.x + a, y: drawing.y + b };
                     for (let i = 0; i <= Math.PI / 2; i = i + 0.2) {
                         let x = ((a * b) / Math.sqrt((b ** 2) + ((a ** 2) * (Math.tan(i) ** 2))));
                         let y = ((a * b) / Math.sqrt((a ** 2) + ((b ** 2) / (Math.tan(i) ** 2))));
@@ -877,9 +878,14 @@ export class MonksWallEnhancement {
                     circlePts = circlePts.concat(duplicate(circlePts).reverse().map(p => { return { x: p.x, y: -p.y }; }));
                     wallpoints = MonksWallEnhancement.simplify(circlePts.map(p => { return { x: p.x + pos.x, y: p.y + pos.y} }), 10);
                     break;
-                case 'p': //polygon
-                    //drawing.data.points
-                    wallpoints = drawing.data.points.map(p => { return { x: drawing.data.x + p[0], y: drawing.data.y + p[1] }; });
+                case 'p': //polygon and freehand
+                    wallpoints = drawing.document.shape.points.reduce(function (result, value, index, array) {
+                        if (index % 2 === 0)
+                            result.push(array.slice(index, index + 2));
+                        return result;
+                    }, []).map(p => {
+                        return { x: drawing.x + p[0], y: drawing.y + p[1] };
+                    });
                     break;
             }
 
@@ -967,8 +973,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
                 //click the button that should be clicked
                 let wallControl = ui.controls.controls.find(e => e.name == 'walls');
                 wallControl.activeTool = MonksWallEnhancement.tool.name;
-                //$('li[data-tool="walltype"]', html).attr('class', MonksWallEnhancement.tool.icon);
-                //$('li[data-tool="' + MonksWallEnhancement.tool.name + '"]', li).click();
             }
         }];
 
@@ -996,7 +1000,7 @@ Hooks.on("renderSceneControls", (controls, html) => {
         if (controls.activeControl == 'walls') {
             let wallBtn = $('li[data-tool="walltype"]', html);
 
-            let wallTypes = $('<ul>').addClass('control-tools').appendTo($('<div>').attr('id', 'wall-ctrls').appendTo(wallBtn));
+            let wallTypes = $('<ol>').addClass('control-tools').appendTo($('<div>').attr('id', 'wall-ctrls').appendTo(wallBtn));
             for (let type of MonksWallEnhancement.types)
                 $('li[data-tool="' + type + '"]', html).appendTo(wallTypes);
 
