@@ -473,8 +473,8 @@ export class MonksWallEnhancement {
             DoorControl.prototype._onRightDown = function (event) {
                 event.stopPropagation();
                 if (!game.user.isGM) return;
-                let state = this.wall.ds,
-                    door = this.wall.door,
+                let state = this.wall.document.ds,
+                    door = this.wall.document.door,
                     states = CONST.WALL_DOOR_STATES,
                     types = CONST.WALL_DOOR_TYPES;
                 if (state === states.OPEN) return;
