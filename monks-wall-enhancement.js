@@ -494,16 +494,16 @@ export class MonksWallEnhancement {
         let closestPt = { x: 0, y: 0 };
         canvas.scene.walls.forEach(w => {
             if (w.id != id) {
-                let dist = Math.sqrt(Math.pow(w.document.c[0] - x, 2) + Math.pow(w.document.c[1] - y, 2));
+                let dist = Math.sqrt(Math.pow(w.c[0] - x, 2) + Math.pow(w.c[1] - y, 2));
                 if (closestDist == undefined || dist < closestDist) {
                     closestDist = dist;
-                    closestPt = { x: w.document.c[0], y: w.document.c[1] };
+                    closestPt = { x: w.c[0], y: w.c[1] };
                 }
 
-                dist = Math.sqrt(Math.pow(w.document.c[2] - x, 2) + Math.pow(w.document.c[3] - y, 2));
+                dist = Math.sqrt(Math.pow(w.c[2] - x, 2) + Math.pow(w.c[3] - y, 2));
                 if (closestDist == undefined || dist < closestDist) {
                     closestDist = dist;
-                    closestPt = { x: w.document.c[2], y: w.document.c[3] };
+                    closestPt = { x: w.c[2], y: w.c[3] };
                 }
             }
         });

@@ -2,6 +2,8 @@
 
 Fixing issues when trying to lock and unlock a door.
 
+Fixed an issue when drawing a wall that has snap to grid turned on.
+
 # Version 1.0.10
 
 Adding v10 support.
