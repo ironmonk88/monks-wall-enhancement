@@ -1,4 +1,4 @@
-# Monk's Wall Enhancment
+# Monk's Wall Enhancement
 Add-On Module for Foundry VTT
 Improvements to the Core Wall functionality.
 
