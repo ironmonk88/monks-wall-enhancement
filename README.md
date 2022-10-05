@@ -25,6 +25,7 @@ While having some wall segments selected, it will go throught he points and find
 
 ### Condense Wall Types
 ![monks-wall-enhancement](WallEnhancementExamples/CondenseWalls.gif)
+
 A setting that can enabled in the module settings, it condenses the wall types down to one button to select your wall type.
 
 ### Freehand Wall Drawing
