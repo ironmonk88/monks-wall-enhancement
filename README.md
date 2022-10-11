@@ -47,6 +47,10 @@ Holding down the CTRL key while Right Clicking a door will toggle it from being 
 
 Converts the currently selected drawings into walls.
 
+### Automatic Wall Adjustment when Resizing Scene
+
+When changing a scene's grid or canvas size, this adds a prompt asking if you want to it to automatically attempt to adjust walls to match the new sizes.
+
 ## Bug Reporting
 I'm sure there are lots of issues with it.  It's very much a work in progress.
 Please feel free to contact me on discord if you have any questions or concerns. ironmonk88#4075
