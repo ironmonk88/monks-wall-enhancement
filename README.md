@@ -21,7 +21,7 @@ When selected, dragging a wall point to a new location will also move any other 
 If you want to split a wall into two parts, enable this in the module setting, then double-clicking somewhere along the line will split it into two parts.
 
 ### Join points
-While having some wall segments selected, it will go throught the points and find ones that are close to each other, and match them up. If you have snap to grid on it won't join points; to use this feature you need to be holding down the shift key.
+While having some wall segments selected, it will go through the points and find ones that are close to each other, and match them up. If you have snap to grid on it won't join points; to use this feature you need to be holding down the shift key.
 
 ### Condense Wall Types
 ![monks-wall-enhancement](WallEnhancementExamples/CondenseWalls.gif)

@@ -9,6 +9,8 @@
 	"MonksWallEnhancement.default-ctrl.hint": "Default to using the ctrl key when creating walls",
 	"MonksWallEnhancement.simplify-distance.name": "Freehand Tollerance",
 	"MonksWallEnhancement.simplify-distance.hint": "Tollerance to use when using the freehand wall tool",
+	"MonksWallEnhancement.join-tollerance.name": "Join Point Tollerance",
+	"MonksWallEnhancement.join-tollerance.hint": "The distance the points need to be within to consider joining them.",
 	"MonksWallEnhancement.toggle-secret.name": "Toggle Secret Door",
 	"MonksWallEnhancement.toggle-secret.hint": "Use CTRL key and right click to toggle between regular and secret door."
 }

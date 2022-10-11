@@ -52,6 +52,20 @@ export const registerSettings = function () {
 		type: Number
 	});
 
+	game.settings.register(modulename, "join-tollerance", {
+		name: i18n("MonksWallEnhancement.join-tollerance.name"),
+		hint: i18n("MonksWallEnhancement.join-tollerance.hint"),
+		scope: "world",
+		config: true,
+		default: 10,
+		type: Number,
+		range: {
+			min: 5,
+			max: 25,
+			step: 1
+		}
+	});
+
 	game.settings.register(modulename, "toggle-secret", {
 		name: i18n("MonksWallEnhancement.toggle-secret.name"),
 		hint: i18n("MonksWallEnhancement.toggle-secret.hint"),

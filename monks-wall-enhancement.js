@@ -14,6 +14,17 @@ export let setting = key => {
     return game.settings.get("monks-wall-enhancement", key);
 };
 
+export let patchFunc = (prop, func, type = "WRAPPER") => {
+    if (game.modules.get("lib-wrapper")?.active) {
+        libWrapper.register("monks-wall-enhancement", prop, func, type);
+    } else {
+        const oldFunc = eval(prop);
+        eval(`${prop} = function (event) {
+            return func.call(this, oldFunc.bind(this), ...arguments);
+        }`);
+    }
+}
+
 export class MonksWallEnhancement {
     
     static init() {
@@ -30,38 +41,44 @@ export class MonksWallEnhancement {
 
         registerSettings();
 
-        /*
         let sceneConfigUpdate = async function (wrapped, ...args) {
             let [event, formData] = args;
             const scene = this.document;
-            let { width, height, padding, shiftX, shiftY, size } = scene.data;
-            const delta = foundry.utils.diffObject(scene.data, formData);
+            let { width, height, padding } = scene;
+            let { offsetX, offsetY } = scene.background;
+            let { sceneX, sceneY } = scene.dimensions;
+            let newData = expandObject(formData);
+            const delta = flattenObject(foundry.utils.diffObject(scene, newData));
 
             let result = await wrapped(...args);
 
             if (result == undefined)
                 return result;
 
-            if (scene.walls.size > 0 && ["width", "height", "padding", "shiftX", "shiftY", "size"].some(k => k in delta)) {
+            const textureChange = ["offsetX", "offsetY", "scaleX", "scaleY", "rotation"].map(k => `background.${k}`);
+            if (scene.walls.size > 0 && ["width", "height", "padding", "grid.size", ...textureChange].some(k => k in delta)) {
                 const confirm = await Dialog.confirm({
                     title: "Adjust walls",
-                    content: `<p>Monk's Wall Enhancements can attempt to shift the walls for you to match the changes made to the map and keep the walls in the original position.  Would you like to do that?</p>`
+                    content: `<p>Monk's Wall Enhancements has detected that changes to the scene would affect current walls and can attempt to reposition them correctly.</p><p>Would you like to do that?</p>`
                 });
 
                 if (confirm) {
                     let updates = [];
-                    let moveX = (delta.shiftX ? -delta.shiftX : 0);
-                    let moveY = (delta.shiftY ? -delta.shiftY : 0);
-                    let adjustX = (delta.width ? (delta.width / width) : 1);
-                    let adjustY = (delta.height ? (delta.height / height) : 1);
+
+                    let adjustX = (newData.width / width);
+                    let adjustY = (newData.height / height);
+                    //let changeX = (offsetX - getProperty(newData, "background.offsetX")); // + ((newData.padding * newData.width) - (padding * width));
+                    //let changeY = (offsetY - getProperty(newData, "background.offsetY")); // + ((newData.padding * newData.height) - (padding * height));
 
                     for (let wall of scene.walls) {
                         updates.push({
-                            _id: wall.id, c: [
-                                (wall.data.c[0] * adjustX) + moveX,
-                                (wall.data.c[1] * adjustY) + moveY,
-                                (wall.data.c[2] * adjustX) + moveX,
-                                (wall.data.c[3] * adjustY) + moveY]
+                            _id: wall.id,
+                            c: [
+                                ((wall.c[0] - sceneX) * adjustX) + scene.dimensions.sceneX,// + changeX,
+                                ((wall.c[1] - sceneY) * adjustY) + scene.dimensions.sceneY,// + changeY,
+                                ((wall.c[2] - sceneX) * adjustX) + scene.dimensions.sceneX,// + changeX,
+                                ((wall.c[3] - sceneY) * adjustY) + scene.dimensions.sceneY// + changeY
+                            ]
                         });
                     }
 
@@ -80,7 +97,7 @@ export class MonksWallEnhancement {
             SceneConfig.prototype._updateObject = function (event) {
                 return sceneConfigUpdate.call(this, oldSceneConfigUpdate.bind(this), ...arguments);
             }
-        }*/
+        }
 
         if (setting('condense-wall-type')) {
             let oldClickTool = SceneControls.prototype._onClickTool;
@@ -470,7 +487,8 @@ export class MonksWallEnhancement {
         }
 
         if (setting("toggle-secret")) {
-            DoorControl.prototype._onRightDown = function (event) {
+            let doorRightDown = async function (...args) {
+                let [event] = args;
                 event.stopPropagation();
                 if (!game.user.isGM) return;
                 let state = this.wall.document.ds,
@@ -484,6 +502,15 @@ export class MonksWallEnhancement {
                 } else {
                     state = state === states.LOCKED ? states.CLOSED : states.LOCKED;
                     return this.wall.document.update({ ds: state });
+                }
+            }
+
+            if (game.modules.get("lib-wrapper")?.active) {
+                libWrapper.register("monks-wall-enhancement", "DoorControl.prototype._onRightDown", doorRightDown, "OVERRIDE");
+            } else {
+                const oldWallLayerClickLeft2 = DoorControl.prototype._onRightDown;
+                DoorControl.prototype._onRightDown = function () {
+                    return doorRightDown.call(this, ...arguments);
                 }
             }
         }
@@ -601,6 +628,8 @@ export class MonksWallEnhancement {
             return true;
         }
 
+        let tollerance = setting("join-tollerance");
+
         //join points that are close to each other
         const cls = getDocumentClass(canvas.walls.constructor.documentName);
         for (let wall of canvas.walls.controlled) {
@@ -608,7 +637,7 @@ export class MonksWallEnhancement {
                 let pt = { x: wall.coords[i * 2], y: wall.coords[(i * 2) + 1] };
 
                 //find all points close to this point
-                let points = findClosePoints(pt);
+                let points = findClosePoints(pt, tollerance);
                 if (points.length > 1) {
                     //if all the points are the same, then ignore this spot
                     if (!allTheSame(pt, points)) {
@@ -839,15 +868,12 @@ export class MonksWallEnhancement {
             let docs = [];
             let wallpoints = [];
 
-            let wd = {
+            let tool = MonksWallEnhancement.tool;
+            let wd = mergeObject({
                 dir: CONST.WALL_DIRECTIONS.BOTH,
                 door: CONST.WALL_DOOR_TYPES.NONE,
-                ds: CONST.WALL_DOOR_STATES.CLOSED,
-                move: CONST.WALL_MOVEMENT_TYPES.NORMAL,
-                light: CONST.WALL_SENSE_TYPES.NORMAL,
-                sight: CONST.WALL_SENSE_TYPES.NORMAL,
-                sound: CONST.WALL_SENSE_TYPES.NORMAL
-            };
+                ds: CONST.WALL_DOOR_STATES.CLOSED
+            }, canvas.walls._getWallDataFromActiveTool(tool.name));
 
             if (drawing.flags?.levels)
                 wd.flags = { 'levels': drawing.flags?.levels };

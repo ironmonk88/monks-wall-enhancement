@@ -1,3 +1,13 @@
+# Version 10.2
+
+Fixed libWrapper warning when overriding the door right click function to toggle a secret door.
+
+Added a tollerance setting for joining points as it was a little too small to affect some points.
+
+Updated the convert drawings to walls to use the current wall type selected.
+
+Added the option to adjust all walls to try and match any dimension changes ot the scene.  That way you can change the grid size, width, height, and offset without having to reposition all the walls.
+
 # Version 10.1
 
 Fixing issues when trying to lock and unlock a door.
