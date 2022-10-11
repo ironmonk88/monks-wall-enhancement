@@ -20,7 +20,10 @@ When selected, dragging a wall point to a new location will also move any other 
 
 If you want to split a wall into two parts, enable this in the module setting, then double-clicking somewhere along the line will split it into two parts.
 
-### Join points
+### Join Points
+
+![monks-wall-enhancement](WallEnhancementExamples/JoinWallJoints.gif)
+
 While having some wall segments selected, it will go through the points and find ones that are close to each other, and match them up. If you have snap to grid on it won't join points; to use this feature you need to be holding down the shift key.
 
 ### Condense Wall Types
@@ -31,12 +34,18 @@ A setting that can enabled in the module settings, it condenses the wall types d
 ### Freehand Wall Drawing
 ![monks-wall-enhancement](WallEnhancementExamples/FreehandWallDraw.gif)
 
-Toggle this setting on and when you draw a wall you can draw it like you would a line.  When you release the button, it will try and find the most economical use of line segments to create the wall.  This is great for cave walls, you can draw along the edge of the cavern image and have a very reasonable approximation.
+Toggle this setting on and when you draw a wall you can draw it like you would a line.  When you release the button, it will try and find the most economical use of line segments to create the wall.  This is great for cave walls, you can draw along the edge of the cavern image and have a very reasonable approximation. The tolerance can adjusted in the module settings.
 
 ### Toggle Secret Door
 ![monks-wall-enhancement](WallEnhancementExamples/ToggleSecretDoor.gif)
 
 Holding down the CTRL key while Right Clicking a door will toggle it from being a secret door to a regular door.
+
+### Convert Drawing to Walls
+
+![monks-wall-enhancement](WallEnhancementExamples/ConvertDrawing.gif)
+
+Converts the currently selected drawings into walls.
 
 ## Bug Reporting
 I'm sure there are lots of issues with it.  It's very much a work in progress.
