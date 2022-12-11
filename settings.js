@@ -33,6 +33,15 @@ export const registerSettings = function () {
 		type: Boolean,
 		onChange: debouncedReload
 	});
+
+	game.settings.register(modulename, "alter-images", {
+		name: i18n("MonksWallEnhancement.alter-images.name"),
+		hint: i18n("MonksWallEnhancement.alter-images.hint"),
+		scope: "world",
+		config: true,
+		default: true,
+		type: Boolean
+	});
 	/*
 	game.settings.register(modulename, "default-ctrl", {
 		name: i18n("MonksWallEnhancement.default-ctrl.name"),
@@ -61,7 +70,7 @@ export const registerSettings = function () {
 		type: Number,
 		range: {
 			min: 5,
-			max: 25,
+			max: 40,
 			step: 1
 		}
 	});

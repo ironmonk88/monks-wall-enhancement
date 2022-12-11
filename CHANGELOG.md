@@ -1,3 +1,17 @@
+# Version 10.3
+
+Added hotkey support.  No keys have been added, but there's space to allow you to change the tool with a shortcut key.
+
+Fixed issue with converting drawings not using the current wall type, unless the wall controls were condensed.
+
+Added option to draw border around the entire scene.
+
+Added the option to close all doors in a Scene.
+
+Added warning if you try and convert drawings and no drawings have been selected.
+
+Added the option to change the tool icons to something that makes more sense.  Honestly I wasn't ever sure what ethereal or invisible meant.  Windows and Curtains made more sense to me.
+
 # Version 10.2
 
 Fixed libWrapper warning when overriding the door right click function to toggle a secret door.

@@ -40,6 +40,7 @@ export class MonksWallEnhancement {
         MonksWallEnhancement.types = ['walls', 'terrain', 'invisible', 'ethereal', 'doors', 'secret'];
 
         registerSettings();
+        MonksWallEnhancement.registerHotKeys();
 
         let sceneConfigUpdate = async function (wrapped, ...args) {
             let [event, formData] = args;
@@ -99,25 +100,26 @@ export class MonksWallEnhancement {
             }
         }
 
-        if (setting('condense-wall-type')) {
-            let oldClickTool = SceneControls.prototype._onClickTool;
-            SceneControls.prototype._onClickTool = function (event) {
-                const li = event.currentTarget;
-                const control = this.control;
-                const toolName = li.dataset.tool;
-                const tool = control.tools.find(t => t.name === toolName);
+        
+        let oldClickTool = SceneControls.prototype._onClickTool;
+        SceneControls.prototype._onClickTool = function (event) {
+            const li = event.currentTarget;
+            const control = this.control;
+            const toolName = li.dataset.tool;
+            const tool = control.tools.find(t => t.name === toolName);
 
-                if (control.name == 'walls') {
-                    if (MonksWallEnhancement.types.includes(tool.name)) {
-                        MonksWallEnhancement.tool = tool;
+            if (control.name == 'walls') {
+                if (MonksWallEnhancement.types.includes(tool.name)) {
+                    MonksWallEnhancement.tool = tool;
+                    if (setting('condense-wall-type')) {
                         const typebutton = control.tools.find(t => t.name === 'walltype');
-                        typebutton.icon = tool.icon;
-                    } else
-                        $('#controls li[data-tool="walltype"]').toggleClass('active', control.name == 'walltype');
-                }
-
-                return oldClickTool.call(this, event);
+                        typebutton.icon = MonksWallEnhancement.getIcon(tool);
+                    }
+                } else if (setting('condense-wall-type'))
+                    $('#controls li[data-tool="walltype"]').toggleClass('active', control.name == 'walltype');
             }
+
+            return oldClickTool.call(this, event);
         }
 
         //Drag points together
@@ -516,6 +518,55 @@ export class MonksWallEnhancement {
         }
     }
 
+    static registerHotKeys() {
+        game.keybindings.register('monks-wall-enhancement', 'walls', {
+            name: 'Walls',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("walls");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'terrain', {
+            name: 'Terrain',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("terrain");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'invisible', {
+            name: 'Invisible',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("invisible");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'ethereal', {
+            name: 'Ethereal',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("ethereal");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'doors', {
+            name: 'Doors',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("doors");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'secret', {
+            name: 'Secret',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("secret");
+            }
+        });
+    }
+
+    static changeTool(tool) {
+        $(`#controls .control-tool[data-tool="${tool}"]`).click();
+    }
+
     static findClosestPoint(id, x, y) {
         let closestDist;
         let closestPt = { x: 0, y: 0 };
@@ -536,6 +587,17 @@ export class MonksWallEnhancement {
         });
 
         return (closestDist < 10 ? closestPt : null);
+    }
+
+    static getIcon(tool) {
+        if (setting("alter-images")) {
+            switch (tool.name) {
+                case 'walls': return "fas fa-person-shelter";
+                case 'invisible': return "fas fa-person-through-window";
+                case 'ethereal': return "fas fa-person-booth";
+            }
+        }
+        return tool.icon;
     }
 
     static simplify(points, tolerance = 20) {
@@ -857,12 +919,15 @@ export class MonksWallEnhancement {
         }
     }
 
-    static async convertDrawings() {
+    static async convertDrawings(event) {
         //get the selected drawings, get the points, and make walls from them.
         //If it's a circle then we'll need to put together some points proper.
         log('Convert walls');
 
         const cls = getDocumentClass("Wall");
+
+        if (canvas.drawings.controlled.length == 0)
+            return ui.notifications.warn("No drawings selected");
 
         for (let drawing of canvas.drawings.controlled) {
             let docs = [];
@@ -933,6 +998,52 @@ export class MonksWallEnhancement {
 
     static ready() {
     }
+
+    static async wallScene() {
+        const cls = getDocumentClass("Wall");
+
+        let docs = [];
+
+        let tool = MonksWallEnhancement.tool;
+        let wd = mergeObject({
+            dir: CONST.WALL_DIRECTIONS.BOTH,
+            door: CONST.WALL_DOOR_TYPES.NONE,
+            ds: CONST.WALL_DOOR_STATES.CLOSED
+        }, canvas.walls._getWallDataFromActiveTool(tool.name));
+
+        let wallpoints = [
+            { x: this.dimensions.sceneX, y: this.dimensions.sceneY },
+            { x: this.dimensions.sceneX + this.dimensions.sceneWidth, y: this.dimensions.sceneY },
+            { x: this.dimensions.sceneX + this.dimensions.sceneWidth, y: this.dimensions.sceneY + this.dimensions.sceneHeight },
+            { x: this.dimensions.sceneX, y: this.dimensions.sceneY + this.dimensions.sceneHeight  },
+            { x: this.dimensions.sceneX, y: this.dimensions.sceneY }
+        ];
+
+        for (let i = 0; i < wallpoints.length - 1; i++) {
+            if (i < wallpoints.length - 1) {
+                wd.c = [wallpoints[i].x, wallpoints[i].y, wallpoints[i + 1].x, wallpoints[i + 1].y];
+                docs.push(duplicate(wd));
+            }
+        }
+
+        await cls.createDocuments(docs, { parent: this });
+        ui.notifications.info("Scene has been walled around the outside.");
+    }
+
+    static async closeDoors() {
+        const cls = getDocumentClass("Wall");
+
+        let updates = [];
+        for (let wall of this.walls) {
+            if (wall.door != CONST.WALL_DOOR_TYPES.NONE && wall.ds == CONST.WALL_DOOR_STATES.OPEN) {
+                updates.push({ _id: wall.id, ds: CONST.WALL_DOOR_STATES.CLOSED });
+            }
+        }
+        if (updates.length)
+            await cls.updateDocuments(updates, { parent: this });
+
+        ui.notifications.info(`${updates.length} doors have been closed`);
+    }
 }
 Hooks.once('init', async function () {
     MonksWallEnhancement.init();
@@ -993,8 +1104,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     if (setting('condense-wall-type')) {
         const wallTypeBtn = [{
             name: "walltype",
-            title: "Draw Walls",
-            icon: MonksWallEnhancement.tool.icon,
+            icon: MonksWallEnhancement.getIcon(MonksWallEnhancement.tool),
             onClick: () => {
                 //click the button that should be clicked
                 let wallControl = ui.controls.controls.find(e => e.name == 'walls');
@@ -1039,4 +1149,25 @@ Hooks.on("renderSceneControls", (controls, html) => {
             $('#wall-ctrls').remove();
         }
     }
+
+    if (controls.activeControl == 'walls' && setting("alter-images")) {
+        $('.control-tool[data-tool="walls"]', html).find("i").removeClass("fa-bars").addClass("fa-person-shelter");
+        $('.control-tool[data-tool="invisible"]', html).attr("data-tooltip", "Windows").find("i").removeClass("fa-eye-slash").addClass("fa-person-through-window");
+        $('.control-tool[data-tool="ethereal"]', html).attr("data-tooltip", "Curtains").find("i").removeClass("fa-mask").addClass("fa-person-booth");
+    }
+});
+
+Hooks.on('renderSceneConfig', async (app, html, options) => {
+    let tab = $('.tab[data-tab="basic"]', html);
+    tab.append($('<hr>'))
+        .append($('<div>')
+            .addClass("form-group")
+            .append($('<label>').html("Wall updates"))
+            .append($("<div>").addClass("flexrow")
+                .append($("<button>").attr("type", "button").on("click", MonksWallEnhancement.wallScene.bind(app.object)).html('<i class="fas fa-university"></i> Wall Scene'))
+                .append($("<button>").attr("type", "button").on("click", MonksWallEnhancement.closeDoors.bind(app.object)).html('<i class="fas fa-door-open"></i> Close Doors'))
+            )
+        );
+
+    app.setPosition({ height: 'auto' });
 });

@@ -5,6 +5,8 @@
 	"MonksWallEnhancement.allow-doubleclick.hint": "Allow double-clicking on a line to split the wall into two",
 	"MonksWallEnhancement.condense-wall-type.name": "Condense Wall Types",
 	"MonksWallEnhancement.condense-wall-type.hint": "Condense Wall Types to a single toggle button that can be changed.",
+	"MonksWallEnhancement.alter-images.name": "Alter wall icons",
+	"MonksWallEnhancement.alter-images.hint": "Change the toolbar wall icons to something that makes more sense.",
 	"MonksWallEnhancement.default-ctrl.name": "Default CTRL",
 	"MonksWallEnhancement.default-ctrl.hint": "Default to using the ctrl key when creating walls",
 	"MonksWallEnhancement.simplify-distance.name": "Freehand Tollerance",
