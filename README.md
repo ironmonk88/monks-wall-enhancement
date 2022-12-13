@@ -51,6 +51,27 @@ Converts the currently selected drawings into walls.
 
 When changing a scene's grid or canvas size, this adds a prompt asking if you want to it to automatically attempt to adjust walls to match the new sizes.
 
+### Clearer Wall Icons
+
+![monks-wall-enhancement](WallEnhancementExamples/NewWallsIcons.webp)
+
+Replaces the default wall names and icons with ones intended to be more clear; ``invisible walls`` becomes ``windows``, ``ethereal walls`` becomes ``curtains``. This option can be disabled in the module settings.
+
+### Wall Hotkeys Support
+
+Adds the option to set up hotkeys to quickly swap your currently drawable wall type.
+
+### Scene Configuration Window Additions
+
+A few additional functions included here, as they are likely used less often and don't need to be in the main wall tools.
+
+#### Wall Off Scene
+Creates walls of your last selected type around the edges of the scene.
+
+#### Close All Doors
+
+Closes all the doors on the scene.
+
 ## Bug Reporting
 I'm sure there are lots of issues with it.  It's very much a work in progress.
 Please feel free to contact me on discord if you have any questions or concerns. ironmonk88#4075
