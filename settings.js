@@ -84,4 +84,14 @@ export const registerSettings = function () {
 		type: Boolean,
 		onChange: debouncedReload
 	});
+
+	game.settings.register(modulename, "remove-close-doors", {
+		name: i18n("MonksWallEnhancement.remove-close-doors.name"),
+		hint: i18n("MonksWallEnhancement.remove-close-doors.hint"),
+		scope: "world",
+		config: true,
+		default: true,
+		type: Boolean,
+		onChange: debouncedReload
+	});
 };

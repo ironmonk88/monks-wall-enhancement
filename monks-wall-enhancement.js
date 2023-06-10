@@ -37,7 +37,7 @@ export class MonksWallEnhancement {
 
         MonksWallEnhancement.tool = { name: 'walls', icon: 'fas fa-bars' };
 
-        MonksWallEnhancement.types = ['walls', 'terrain', 'invisible', 'ethereal', 'doors', 'secret'];
+        MonksWallEnhancement.types = ['walls', 'terrain', 'invisible', 'ethereal', 'doors', 'secret', 'window'];
 
         registerSettings();
         MonksWallEnhancement.registerHotKeys();
@@ -109,7 +109,7 @@ export class MonksWallEnhancement {
             const tool = control.tools.find(t => t.name === toolName);
 
             if (control.name == 'walls') {
-                if (MonksWallEnhancement.types.includes(tool.name)) {
+                if (MonksWallEnhancement.types.includes(tool?.name)) {
                     MonksWallEnhancement.tool = tool;
                     if (setting('condense-wall-type')) {
                         const typebutton = control.tools.find(t => t.name === 'walltype');
@@ -132,7 +132,7 @@ export class MonksWallEnhancement {
             if (dragtogether != undefined && dragtogether.active) {
                 MonksWallEnhancement.dragpoints = [];
                 //find any points that should be dragged with selected point
-                let fixed = event.data.fixed;
+                let fixed = event.interactionData.fixed;
                 let oldcoord = (fixed ? this.coords.slice(0, 2) : this.coords.slice(2, 4));
                 if (oldcoord != null) {
                     this.scene.walls.forEach(w => {
@@ -161,7 +161,7 @@ export class MonksWallEnhancement {
 
         let wallDragMove = function (wrapped, ...args) {
             let event = args[0];
-            const { clones, destination, fixed, origin, originalEvent } = event.data;
+            const { clones, destination } = event.data.interactionData;
 
             let dragtogether = ui.controls.control.tools.find(t => { return t.name == "toggledragtogether" });
             if (dragtogether != undefined && dragtogether.active && MonksWallEnhancement.dragpoints?.length > 0 && clones.length === 1) {
@@ -189,7 +189,9 @@ export class MonksWallEnhancement {
         let wallDragDrop = async function (wrapped, ...args) {
             let event = args[0];
 
-            const { clones, destination, fixed, originalEvent } = event.data;
+            const { originalEvent } = event.data;
+            const { clones, destination } = event.data.interactionData;
+
             const layer = this.layer;
             const snap = layer._forceSnap || !originalEvent.shiftKey;
 
@@ -238,7 +240,7 @@ export class MonksWallEnhancement {
         //Snap to point
         let wallLayerDragLeftStart = async function (wrapped, ...args) {
             let event = args[0];
-            const { origin } = event.data;
+            const { origin } = event.data.interactionData;
 
             let oldSnap = this._forceSnap;
             let snaptowall = ui.controls.control.tools.find(t => { return t.name == "snaptowall" });
@@ -270,7 +272,7 @@ export class MonksWallEnhancement {
         //Freehand draw wall
         let wallLayerLeftClick = async function (wrapped, ...args) {
             let event = args[0];
-            const { createState, origin, destination, originalEvent, preview } = event.data;
+            const { origin } = event.data.interactionData;
 
             let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
             let findwall = { active: false }; //ui.controls.control.tools.find(t => { return t.name == "findwall" });
@@ -310,7 +312,7 @@ export class MonksWallEnhancement {
 
         let wallLayerDragMove = async function (wrapped, ...args) {
             let event = args[0];
-            const { createState, origin, destination, originalEvent, preview } = event.data;
+            const { origin, destination, preview } = event.data.interactionData;
 
 			let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
             if (drawwall.active) {
@@ -348,7 +350,8 @@ export class MonksWallEnhancement {
 
         let wallLayerDragLeftDrop = async function (wrapped, ...args) {
             let event = args[0];
-            const { createState, destination, originalEvent, preview } = event.data;
+            const { originalEvent } = event.data;
+            const { destination, preview } = event.data.interactionData;
 
 			let drawwall = ui.controls.control.tools.find(t => { return t.name == "toggledrawwall" });
             if (drawwall.active) {
@@ -432,61 +435,50 @@ export class MonksWallEnhancement {
         }
 
         //Double-click to split wall
-        let wallLayerClickLeft2 = async function (wrapped, ...args) {
+        let wallClickLeft2 = async function (wrapped, ...args) {
             let event = args[0];
-            const { createState, origin, destination, originalEvent, preview } = event.data;
+            const { origin } = event.data.interactionData;
 
             if (setting('allow-doubleclick') && origin) {
                 //check to see that I'm somewhere on the line
-                let hasWall = false;
-                for (let wall of this.placeables) {
-                    let a = { x: wall.coords[0], y: wall.coords[1] };
-                    let b = { x: wall.coords[2], y: wall.coords[3] };
+                let a = { x: this.coords[0], y: this.coords[1] };
+                let b = { x: this.coords[2], y: this.coords[3] };
 
-                    if (Math.hypot(a.x - origin.x, a.y - origin.y) < 20)
-                        continue;
-                    if (Math.hypot(b.x - origin.x, b.y - origin.y) < 20)
-                        continue;
+                if (Math.hypot(a.x - origin.x, a.y - origin.y) < 20)
+                    return wrapped(...args);
+                if (Math.hypot(b.x - origin.x, b.y - origin.y) < 20)
+                    return wrapped(...args);
 
-                    var atob = { x: b.x - a.x, y: b.y - a.y };
-                    var atop = { x: origin.x - a.x, y: origin.y - a.y };
-                    var len = atob.x * atob.x + atob.y * atob.y;
-                    var dot = atop.x * atob.x + atop.y * atob.y;
-                    var t = Math.min(1, Math.max(0, dot / len));
+                var atob = { x: b.x - a.x, y: b.y - a.y };
+                var atop = { x: origin.x - a.x, y: origin.y - a.y };
+                var len = atob.x * atob.x + atob.y * atob.y;
+                var dot = atop.x * atob.x + atop.y * atob.y;
+                var t = Math.min(1, Math.max(0, dot / len));
 
-                    //dot = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
-                    let point = { x: a.x + atob.x * t, y: a.y + atob.y * t };
+                //dot = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+                let point = { x: a.x + atob.x * t, y: a.y + atob.y * t };
 
-                    let dist = Math.sqrt(Math.pow(point.x - origin.x, 2) + Math.pow(point.y - origin.y, 2));
+                let dist = Math.sqrt(Math.pow(point.x - origin.x, 2) + Math.pow(point.y - origin.y, 2));
 
-                    log(a, b, origin, point, dist);
+                log(a, b, origin, point, dist);
 
-                    //log(wall.coords, d1, d2, d, x, y, dist)
-                    if (dist < 7) {
-                        //split the wall
-                        hasWall = true;
-                        const cls = getDocumentClass(this.constructor.documentName);
-                        let newwall = wall.document.toObject(false);
-                        delete newwall._id;
-                        newwall.c = [point.x, point.y].concat(newwall.c.slice(2, 4));
-                        await wall.document.update({ c: wall.coords.slice(0, 2).concat([point.x, point.y]) });
-                        await cls.createDocuments([newwall], { parent: canvas.scene });
-                    }
+                //log(wall.coords, d1, d2, d, x, y, dist)
+                if (dist < 7) {
+                    //split the wall
+                    const cls = getDocumentClass(this.constructor.name);
+                    let newwall = this.document.toObject(false);
+                    delete newwall._id;
+                    newwall.c = [point.x, point.y].concat(newwall.c.slice(2, 4));
+                    await this.document.update({ c: this.coords.slice(0, 2).concat([point.x, point.y]) });
+                    await cls.createDocuments([newwall], { parent: canvas.scene });
                 }
-                if(!hasWall)
+                else 
                     return wrapped(...args);
             } else
                 return wrapped(...args);
         }
 
-        if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.register("monks-wall-enhancement", "WallsLayer.prototype._onClickLeft2", wallLayerClickLeft2, "MIXED");
-        } else {
-            const oldWallLayerClickLeft2 = WallsLayer.prototype._onClickLeft2;
-            WallsLayer.prototype._onClickLeft2 = function () {
-                return wallLayerClickLeft2.call(this, oldWallLayerClickLeft2.bind(this), ...arguments);
-            }
-        }
+        patchFunc("Wall.prototype._onClickLeft2", wallClickLeft2, "MIXED")
 
         if (setting("toggle-secret")) {
             let doorRightDown = async function (...args) {
@@ -545,6 +537,13 @@ export class MonksWallEnhancement {
             editable: [],
             onDown: () => {
                 MonksWallEnhancement.changeTool("ethereal");
+            }
+        });
+        game.keybindings.register('monks-wall-enhancement', 'window', {
+            name: 'Window',
+            editable: [],
+            onDown: () => {
+                MonksWallEnhancement.changeTool("window");
             }
         });
         game.keybindings.register('monks-wall-enhancement', 'doors', {
@@ -1115,13 +1114,17 @@ Hooks.on("getSceneControlButtons", (controls) => {
         wallTools.splice(wallTools.findIndex(e => e.name === 'select') + 1, 0, ...wallTypeBtn);
     }
 
+    if (setting("remove-close-doors")) {
+        wallTools.findSplice((t) => t.name === "close-doors");
+    }
+
     if (game.user.isGM) {
         let drawingTools = controls.find(control => control.name === "drawings").tools;
 
         const convertToWalls = [{
             name: "converttowalls",
             title: "Convert To Walls",
-            icon: "fas fa-university",
+            icon: "fas fa-block-brick",
             toggle: false,
             button: true,
             active: true,
@@ -1152,8 +1155,8 @@ Hooks.on("renderSceneControls", (controls, html) => {
 
     if (controls.activeControl == 'walls' && setting("alter-images")) {
         $('.control-tool[data-tool="walls"]', html).find("i").removeClass("fa-bars").addClass("fa-person-shelter");
-        $('.control-tool[data-tool="invisible"]', html).attr("data-tooltip", "Windows").find("i").removeClass("fa-eye-slash").addClass("fa-person-through-window");
-        $('.control-tool[data-tool="ethereal"]', html).attr("data-tooltip", "Curtains").find("i").removeClass("fa-mask").addClass("fa-person-booth");
+        $('.control-tool[data-tool="invisible"]', html).find("i").removeClass("fa-eye-slash").addClass("fa-person-through-window");
+        $('.control-tool[data-tool="ethereal"]', html).attr("data-tooltip", $('.control-tool[data-tool="ethereal"]', html).attr("data-tooltip").replace("Ethereal Walls", "Ethereal Walls <small>(aka Curtains)</small>")).find("i").removeClass("fa-mask").addClass("fa-person-booth");
     }
 });
 
@@ -1164,10 +1167,23 @@ Hooks.on('renderSceneConfig', async (app, html, options) => {
             .addClass("form-group")
             .append($('<label>').html("Wall updates"))
             .append($("<div>").addClass("flexrow")
-                .append($("<button>").attr("type", "button").on("click", MonksWallEnhancement.wallScene.bind(app.object)).html('<i class="fas fa-university"></i> Wall Scene'))
+                .append($("<button>").attr("type", "button").on("click", MonksWallEnhancement.wallScene.bind(app.object)).html('<i class="fas fa-block-brick"></i> Wall Scene'))
                 .append($("<button>").attr("type", "button").on("click", MonksWallEnhancement.closeDoors.bind(app.object)).html('<i class="fas fa-door-open"></i> Close Doors'))
             )
         );
 
     app.setPosition({ height: 'auto' });
 });
+
+Hooks.on("getSceneNavigationContext", (html, menu) => {
+    menu.push({
+        name: "Close All Doors",
+        icon: '<i class="fas fa-door-open"></i>',
+        condition: li => game.user.isGM,
+        callback: li => {
+            let scene = game.scenes.get(li.data("sceneId"));
+            if (scene)
+                MonksWallEnhancement.closeDoors.call(scene);
+        }
+    });
+})

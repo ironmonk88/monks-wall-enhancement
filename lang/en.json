@@ -14,5 +14,7 @@
 	"MonksWallEnhancement.join-tollerance.name": "Join Point Tollerance",
 	"MonksWallEnhancement.join-tollerance.hint": "The distance the points need to be within to consider joining them.",
 	"MonksWallEnhancement.toggle-secret.name": "Toggle Secret Door",
-	"MonksWallEnhancement.toggle-secret.hint": "Use CTRL key and right click to toggle between regular and secret door."
+	"MonksWallEnhancement.toggle-secret.hint": "Use CTRL key and right click to toggle between regular and secret door.",
+	"MonksWallEnhancement.remove-close-doors.name": "Remove Close Doors Tool",
+	"MonksWallEnhancement.remove-close-doors.hint": "Remove the close all doors tool, because there's a button in the scene config that will do that and adding it to the toolbar just take up a lot of space, and that toolbar already has a lo9t of items on it."
 }

@@ -1,3 +1,11 @@
+# Version 11.01
+
+Added support for v11
+
+Added the option to remove the close all doors tool from the toolbar.  As it takes up room in an already crowded toolbar, and the function exists in the scene config.
+
+Added an option on the Scene context menu to close all doors in a scene.
+
 # Version 10.3
 
 Added hotkey support.  No keys have been added, but there's space to allow you to change the tool with a shortcut key.
