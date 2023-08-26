@@ -1,3 +1,11 @@
+# Version 11.02
+
+Added the option to allow position of wall using arrow keys.  Hold down the Shift key to move only one of the points, and Ctrl + Shift to move the other one.
+
+Added the option to have one way doors.  If your door has a direction on it, then players can walk throught he door one way, but it become a wall on the way back.
+
+Added the option to edit the wall points manually, since for some reason it's no longer available in v11.
+
 # Version 11.01
 
 Added support for v11

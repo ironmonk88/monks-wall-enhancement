@@ -15,13 +15,20 @@ export let setting = key => {
 };
 
 export let patchFunc = (prop, func, type = "WRAPPER") => {
-    if (game.modules.get("lib-wrapper")?.active) {
-        libWrapper.register("monks-wall-enhancement", prop, func, type);
-    } else {
+    let nonLibWrapper = () => {
         const oldFunc = eval(prop);
         eval(`${prop} = function (event) {
-            return func.call(this, oldFunc.bind(this), ...arguments);
+            return func.call(this, ${type != "OVERRIDE" ? "oldFunc.bind(this)," : ""} ...arguments);
         }`);
+    }
+    if (game.modules.get("lib-wrapper")?.active) {
+        try {
+            libWrapper.register("monks-wall-enhancement", prop, func, type);
+        } catch (e) {
+            nonLibWrapper();
+        }
+    } else {
+        nonLibWrapper();
     }
 }
 
@@ -100,6 +107,143 @@ export class MonksWallEnhancement {
             }
         }
 
+       if (setting("allow-key-movement")) {
+            patchFunc("ClientKeybindings.prototype._onPan", function (...args) {
+                let [context, movementDirections] = args;
+                // Case 1: Check for Tour
+                if ((Tour.tourInProgress) && (!context.repeat) && (!context.up)) {
+                    Tour.onMovementAction(movementDirections);
+                    return true;
+                }
+
+                // Case 2: Check for Canvas
+                if (!canvas.ready) return false;
+
+                // Remove Keys on Up
+                if (context.up) {
+                    for (let d of movementDirections) {
+                        this.moveKeys.delete(d);
+                    }
+                    return true;
+                }
+
+                // Keep track of when we last moved
+                const now = Date.now();
+                const delta = now - this._moveTime;
+
+                // Track the movement set
+                for (let d of movementDirections) {
+                    this.moveKeys.add(d);
+                }
+
+                const layer = canvas.activeLayer;
+                // Handle canvas pan using CTRL
+                if (context.isControl && !(context.isShift && layer === canvas.walls)) {
+                    if (["KeyW", "KeyA", "KeyS", "KeyD"].includes(context.key)) return false;
+                    this._handleCanvasPan();
+                    return true;
+                }
+
+                // Delay 50ms before shifting tokens in order to capture diagonal movements
+                if ((layer === canvas.tokens) || (layer === canvas.tiles)) {
+                    if (delta < 100) return true; // Throttle keyboard movement once per 100ms
+                    setTimeout(() => this._handleMovement(context, layer), 50);
+                } else if (layer === canvas.walls) {
+                    if (delta < 100) return true; // Throttle keyboard movement once per 100ms
+                    setTimeout(() => {
+                        if (!this.moveKeys.size) return;
+
+                        // Get controlled objects
+                        let objects = layer.placeables.filter(o => o.controlled);
+                        if (objects.length === 0) return;
+
+                        // Define movement offsets and get moved directions
+                        const directions = this.moveKeys;
+                        let dx = 0;
+                        let dy = 0;
+
+                        // Assign movement offsets
+                        if (directions.has(ClientKeybindings.MOVEMENT_DIRECTIONS.LEFT)) dx -= 1;
+                        else if (directions.has(ClientKeybindings.MOVEMENT_DIRECTIONS.RIGHT)) dx += 1;
+                        if (directions.has(ClientKeybindings.MOVEMENT_DIRECTIONS.UP)) dy -= 1;
+                        else if (directions.has(ClientKeybindings.MOVEMENT_DIRECTIONS.DOWN)) dy += 1;
+
+                        // Perform the shift or rotation
+                        let updates = [];
+                        for (let wall of objects) {
+                            let update = { _id: wall.id, c: wall.document.c };
+                            // if shift and control aren't being pressed or just the shift key is pressed, then increase the first and second coordinate by dx and dy
+                            if ((!context.isShift && !context.isControl) || (context.isShift && !context.isControl)) {
+                                update.c[0] += dx;
+                                update.c[1] += dy;
+                            }
+                            // if shift and control aren't being pressed or shift and control are being pressed, then increase the third and fourth coordinate by dx and dy
+                            if ((!context.isShift && !context.isControl) || (context.isShift && context.isControl)) {
+                                update.c[2] += dx;
+                                update.c[3] += dy;
+                            }
+
+                            updates.push(update);
+                        }
+                        WallDocument.updateDocuments(updates, { parent: canvas.scene });
+                    }, 50);
+                }
+                this._moveTime = now;
+                return true;
+            }, "OVERRIDE");
+        }
+
+        if (setting("allow-one-way-doors")) {
+
+            patchFunc("PointSourcePolygon.prototype._testWallInclusion", function (wrapper, ...args) {
+                const { type, boundaryShapes, useThreshold, wallDirectionMode, externalRadius } = this.config;
+                let [wall] = args;
+
+                const side = wall.orientPoint(this.origin);
+                const wdm = PointSourcePolygon.WALL_DIRECTION_MODES;
+                if (side && wall.document.dir && (wallDirectionMode !== wdm.BOTH) && wall.document.door) {
+                    if ((wallDirectionMode === wdm.NORMAL) === (side === wall.document.dir)) {
+                        return true;
+                    }
+                }
+                return wrapper(...args);
+            }, "MIXED");
+
+            Object.defineProperty(DoorControl.prototype, "isVisible", {
+                get: function () {
+                    if (!canvas.effects.visibility.tokenVision) return true;
+
+                    // Hide secret doors from players
+                    const w = this.wall;
+                    if ((w.document.door === CONST.WALL_DOOR_TYPES.SECRET) && !game.user.isGM) return false;
+
+                    if (!game.user.isGM && w.document.dir) {
+                        // If all controlled tokens are on the wrong side of the door, then hide the door control
+                        if (!game.canvas.tokens.controlled.some((t) => {
+                            const side = w.orientPoint({ x: t.x, y: t.y });
+                            return side !== w.document.dir;
+                        })) {
+                            return false;
+                        }
+                    }
+
+                    // Test two points which are perpendicular to the door midpoint
+                    const ray = this.wall.toRay();
+                    const [x, y] = w.midpoint;
+                    const [dx, dy] = [-ray.dy, ray.dx];
+                    const t = 3 / (Math.abs(dx) + Math.abs(dy)); // Approximate with Manhattan distance for speed
+                    const points = [
+                        { x: x + (t * dx), y: y + (t * dy) },
+                        { x: x - (t * dx), y: y - (t * dy) }
+                    ];
+
+                    // Test each point for visibility
+                    return points.some(p => {
+                        return canvas.effects.visibility.testVisibility(p, { object: this, tolerance: 0 });
+                    });
+                }
+            });
+        }
         
         let oldClickTool = SceneControls.prototype._onClickTool;
         SceneControls.prototype._onClickTool = function (event) {
@@ -1186,4 +1330,55 @@ Hooks.on("getSceneNavigationContext", (html, menu) => {
                 MonksWallEnhancement.closeDoors.call(scene);
         }
     });
-})
+});
+
+Hooks.on('renderWallConfig', async (app, html, options) => {
+    // Insert a button after the input on the first form group
+    $('.form-group:first input', html).after(
+        $('<button>')
+            .attr('type', 'button')
+            .addClass('edit-wall-points').html('<i class="fas fa-pencil"></i>').on('click', () => {
+                //Open a dialog to edit the points
+                let wall = app.object;
+                let points = wall.c;
+
+                let html = `
+<form>
+    <div class="form-group">
+        <label>${i18n("MonksWallEnhancement.Points") }<small>(x1, y1)</small></label>
+        <div class="form-fields">
+            <input type="number" name="c0" value="${points[0]}">
+            <input type="number" name="c1" value="${points[1]}">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>${i18n("MonksWallEnhancement.Points") }<small>(x2, y2)</small></label>
+        <div class="form-fields">
+            <input type="number" name="c2" value="${points[2]}">
+            <input type="number" name="c3" value="${points[3]}">
+        </div>
+    </div>
+</form>`
+
+                new Dialog({
+                    title: i18n("MonksWallEnhancement.EditWallPoints"),
+                    content: html,
+                    buttons: {
+                        save: {
+                            icon: '<i class="fas fa-check"></i>',
+                            label: i18n("MonksWallEnhancement.Save"),
+                            callback: (html) => {
+                                const fd = new FormDataExtended($("form", html)[0]);
+                                let data = fd.object;
+                                wall.update({ c: [data.c0, data.c1, data.c2, data.c3] });
+                            }
+                        },
+                        cancel: {
+                            icon: '<i class="fas fa-times"></i>',
+                            label: i18n("MonksWallEnhancement.Cancel")
+                        }
+                    },
+                    default: "save"
+                }).render(true);
+            }));
+});

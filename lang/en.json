@@ -16,5 +16,14 @@
 	"MonksWallEnhancement.toggle-secret.name": "Toggle Secret Door",
 	"MonksWallEnhancement.toggle-secret.hint": "Use CTRL key and right click to toggle between regular and secret door.",
 	"MonksWallEnhancement.remove-close-doors.name": "Remove Close Doors Tool",
-	"MonksWallEnhancement.remove-close-doors.hint": "Remove the close all doors tool, because there's a button in the scene config that will do that and adding it to the toolbar just take up a lot of space, and that toolbar already has a lo9t of items on it."
+	"MonksWallEnhancement.remove-close-doors.hint": "Remove the close all doors tool, because there's a button in the scene config that will do that and adding it to the toolbar just take up a lot of space, and that toolbar already has a lot of items on it.",
+	"MonksWallEnhancement.allow-one-way-doors.name": "Allow One Way Doors",
+	"MonksWallEnhancement.allow-one-way-doors.hint": "Allow doors with a direction set to be one way.",
+	"MonksWallEnhancement.allow-key-movement.name": "Allow Key Movement",
+	"MonksWallEnhancement.allow-key-movement.hint": "Allow moving walls with the arrow keys.",
+
+	"MonksWallEnhancement.Save": "Save",
+	"MonksWallEnhancement.Cancel": "Cancel",
+	"MonksWallEnhancement.EditWallPoints": "Edit Wall Points",
+	"MonksWallEnhancement.Points": "Points"
 }
