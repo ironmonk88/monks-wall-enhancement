@@ -22,6 +22,12 @@
 	"MonksWallEnhancement.allow-key-movement.name": "Allow Key Movement",
 	"MonksWallEnhancement.allow-key-movement.hint": "Allow moving walls with the arrow keys.",
 
+	"MonksWallEnhancement.DragPointsTogether": "Drag points together",
+	"MonksWallEnhancement.FreehandDrawWall": "Freehand Draw Wall",
+	"MonksWallEnhancement.JoinWallPoints": "Join Wall Points",
+	"MonksWallEnhancement.SnapToPoint": "Snap To Closest Wall Point",
+	"MonksWallEnhancement.ToggleWallsDisplay": "Toggle Walls Display",
+
 	"MonksWallEnhancement.Save": "Save",
 	"MonksWallEnhancement.Cancel": "Cancel",
 	"MonksWallEnhancement.EditWallPoints": "Edit Wall Points",

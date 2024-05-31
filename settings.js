@@ -112,4 +112,14 @@ export const registerSettings = function () {
 		type: Boolean,
 		requiresReload: true
 	});
+
+	game.settings.register(modulename, "wallsDisplayToggle", {
+		scope: "client",
+		config: false,
+		default: false,
+		type: Boolean,
+		onChange: value => {
+            
+        }
+	});
 };

@@ -55,8 +55,8 @@ export class MonksWallEnhancement {
             let { width, height, padding } = scene;
             let { offsetX, offsetY } = scene.background;
             let { sceneX, sceneY } = scene.dimensions;
-            let newData = expandObject(formData);
-            const delta = flattenObject(foundry.utils.diffObject(scene, newData));
+            let newData = foundry.utils.expandObject(formData);
+            const delta = foundry.utils.flattenObject(foundry.utils.diffObject(scene, newData));
 
             let result = await wrapped(...args);
 
@@ -75,8 +75,8 @@ export class MonksWallEnhancement {
 
                     let adjustX = (newData.width / width);
                     let adjustY = (newData.height / height);
-                    //let changeX = (offsetX - getProperty(newData, "background.offsetX")); // + ((newData.padding * newData.width) - (padding * width));
-                    //let changeY = (offsetY - getProperty(newData, "background.offsetY")); // + ((newData.padding * newData.height) - (padding * height));
+                    //let changeX = (offsetX - foundry.utils.getProperty(newData, "background.offsetX")); // + ((newData.padding * newData.width) - (padding * width));
+                    //let changeY = (offsetY - foundry.utils.getProperty(newData, "background.offsetY")); // + ((newData.padding * newData.height) - (padding * height));
 
                     for (let wall of scene.walls) {
                         updates.push({
@@ -107,7 +107,19 @@ export class MonksWallEnhancement {
             }
         }
 
-       if (setting("allow-key-movement")) {
+        patchFunc("WallsLayer.prototype._deactivate", function (wrapper, ...args) {
+            wrapper(...args);
+            const isToggled = setting("wallsDisplayToggle");
+            this.objects.visible = isToggled;
+        })
+
+        patchFunc("WallsLayer.prototype._draw", async function (wrapper, ...args) {
+            await wrapper(...args);
+            const isToggled = setting("wallsDisplayToggle");
+            this.objects.visible ||= isToggled;
+        })
+
+        if (setting("allow-key-movement")) {
             patchFunc("ClientKeybindings.prototype._onPan", function (...args) {
                 let [context, movementDirections] = args;
                 // Case 1: Check for Tour
@@ -195,14 +207,14 @@ export class MonksWallEnhancement {
 
         if (setting("allow-one-way-doors")) {
 
-            patchFunc("PointSourcePolygon.prototype._testWallInclusion", function (wrapper, ...args) {
+            patchFunc("ClockwiseSweepPolygon.prototype._testEdgeInclusion", function (wrapper, ...args) {
                 const { type, boundaryShapes, useThreshold, wallDirectionMode, externalRadius } = this.config;
-                let [wall] = args;
+                let [edge, edgeTypes, bounds] = args;
 
-                const side = wall.orientPoint(this.origin);
+                const side = edge.orientPoint(this.origin);
                 const wdm = PointSourcePolygon.WALL_DIRECTION_MODES;
-                if (side && wall.document.dir && (wallDirectionMode !== wdm.BOTH) && wall.document.door) {
-                    if ((wallDirectionMode === wdm.NORMAL) === (side === wall.document.dir)) {
+                if (side && edge.direction && (wallDirectionMode !== wdm.BOTH) && edge.object?.isDoor) {
+                    if ((wallDirectionMode === wdm.NORMAL) === (side === edge.direction)) {
                         return true;
                     }
                 }
@@ -211,7 +223,7 @@ export class MonksWallEnhancement {
 
             Object.defineProperty(DoorControl.prototype, "isVisible", {
                 get: function () {
-                    if (!canvas.effects.visibility.tokenVision) return true;
+                    if (!canvas.visibility.tokenVision) return true;
 
                     // Hide secret doors from players
                     const w = this.wall;
@@ -220,7 +232,7 @@ export class MonksWallEnhancement {
                     if (!game.user.isGM && w.document.dir) {
                         // If all controlled tokens are on the wrong side of the door, then hide the door control
                         if (!game.canvas.tokens.controlled.some((t) => {
-                            const side = w.orientPoint({ x: t.x, y: t.y });
+                            const side = w.orientPoint({ x: t.x + ((t.shape?.width ?? 0) / 2), y: t.y + ((t.shape?.height ?? 0) / 2) });
                             return side !== w.document.dir;
                         })) {
                             return false;
@@ -239,7 +251,7 @@ export class MonksWallEnhancement {
 
                     // Test each point for visibility
                     return points.some(p => {
-                        return canvas.effects.visibility.testVisibility(p, { object: this, tolerance: 0 });
+                        return canvas.visibility.testVisibility(p, { object: this, tolerance: 0 });
                     });
                 }
             });
@@ -636,10 +648,12 @@ export class MonksWallEnhancement {
                 if (state === states.OPEN) return;
                 if (event.data.originalEvent.ctrlKey) {
                     door = door === types.SECRET ? types.DOOR : types.SECRET;
-                    return this.wall.document.update({ door: door });
+                    const sound = !(game.user.isGM && game.keyboard.isModifierActive(KeyboardManager.MODIFIER_KEYS.CONTROL));
+                    return this.wall.document.update({ door: door }, { sound });
                 } else {
                     state = state === states.LOCKED ? states.CLOSED : states.LOCKED;
-                    return this.wall.document.update({ ds: state });
+                    const sound = !(game.user.isGM && game.keyboard.isModifierActive(KeyboardManager.MODIFIER_KEYS.ALT));
+                    return this.wall.document.update({ ds: state }, { sound });
                 }
             }
 
@@ -1077,7 +1091,7 @@ export class MonksWallEnhancement {
             let wallpoints = [];
 
             let tool = MonksWallEnhancement.tool;
-            let wd = mergeObject({
+            let wd = foundry.utils.mergeObject({
                 dir: CONST.WALL_DIRECTIONS.BOTH,
                 door: CONST.WALL_DOOR_TYPES.NONE,
                 ds: CONST.WALL_DOOR_STATES.CLOSED
@@ -1090,27 +1104,31 @@ export class MonksWallEnhancement {
 
             switch (drawing.type) {
                 case 'r': //rect
+                    let hw = ((drawing.shape.width / 2) - size);
+                    let hh = ((drawing.shape.height / 2) - size);
                     wallpoints = [
-                        { x: drawing.x + size, y: drawing.y + size },
-                        { x: drawing.x + drawing.width - size, y: drawing.y + size },
-                        { x: drawing.x + drawing.width - size, y: drawing.y + drawing.height - size },
-                        { x: drawing.x + size, y: drawing.y + drawing.height - size },
-                        { x: drawing.x + size, y: drawing.y + size }
+                        { x: drawing.shape.x - hw, y: drawing.shape.y - hh },
+                        { x: drawing.shape.x + hw, y: drawing.shape.y - hh },
+                        { x: drawing.shape.x + hw, y: drawing.shape.y + hh },
+                        { x: drawing.shape.x - hw, y: drawing.shape.y + hh },
+                        { x: drawing.shape.x - hw, y: drawing.shape.y - hh }
                     ];
                     break;
                 case 'e': //circle
                     let circlePts = [];
-                    let a = drawing.width / 2;
-                    let b = drawing.height / 2;
-                    let pos = { x: drawing.x + a, y: drawing.y + b };
-                    for (let i = 0; i <= Math.PI / 2; i = i + 0.2) {
-                        let x = ((a * b) / Math.sqrt((b ** 2) + ((a ** 2) * (Math.tan(i) ** 2))));
-                        let y = ((a * b) / Math.sqrt((a ** 2) + ((b ** 2) / (Math.tan(i) ** 2))));
-                        circlePts.push({ x: x, y: y});
+                    let a = drawing.shape.width / 2;
+                    let b = drawing.shape.height / 2;
+                    let center = { x: drawing.shape.x, y: drawing.shape.y };
+                    for (let i = 0; i < 200; i++) {
+                        const t = (i / 200) * 2 * Math.PI;
+                        const x = center.x + a * Math.cos(t);
+                        const y = center.y + b * Math.sin(t);
+                        circlePts.push({ x: x, y: y });
                     }
-                    circlePts = circlePts.concat(duplicate(circlePts).reverse().map(p => { return { x: -p.x, y: p.y }; }));
-                    circlePts = circlePts.concat(duplicate(circlePts).reverse().map(p => { return { x: p.x, y: -p.y }; }));
-                    wallpoints = MonksWallEnhancement.simplify(circlePts.map(p => { return { x: p.x + pos.x, y: p.y + pos.y} }), 10);
+                    //circlePts = circlePts.concat(foundry.utils.duplicate(circlePts).reverse().map(p => { return { x: -p.x, y: p.y }; }));
+                    //circlePts = circlePts.concat(foundry.utils.duplicate(circlePts).reverse().map(p => { return { x: p.x, y: -p.y }; }));
+                    wallpoints = MonksWallEnhancement.simplify(circlePts, 10);
+                    wallpoints[wallpoints.length - 1] = wallpoints[0];
                     break;
                 case 'p': //polygon and freehand
                     wallpoints = drawing.document.shape.points.reduce(function (result, value, index, array) {
@@ -1123,10 +1141,29 @@ export class MonksWallEnhancement {
                     break;
             }
 
+            if (drawing.document.rotation != 0) {
+                //rotate the point
+                function rotate(cx, cy, x, y, angle) {
+                    var rad = Math.toRadians(angle),
+                        cos = Math.cos(rad),
+                        sin = Math.sin(rad),
+                        run = x - cx,
+                        rise = y - cy,
+                        tx = (cos * run) + (sin * rise) + cx,
+                        ty = (cos * rise) - (sin * run) + cy;
+                    return { x: tx, y: ty };
+                }
+
+                for (let i = 0; i < wallpoints.length; i++) {
+                    let pt = wallpoints[i];
+                    wallpoints[i] = rotate(drawing.shape.x, drawing.shape.y, pt.x, pt.y, 360 - drawing.document.rotation);
+                }
+            }
+
             for (let i = 0; i < wallpoints.length - 1; i++) {
                 if (i < wallpoints.length - 1) {
                     wd.c = [wallpoints[i].x, wallpoints[i].y, wallpoints[i + 1].x, wallpoints[i + 1].y];
-                    docs.push(duplicate(wd));
+                    docs.push(foundry.utils.duplicate(wd));
                 }
             }
 
@@ -1148,7 +1185,7 @@ export class MonksWallEnhancement {
         let docs = [];
 
         let tool = MonksWallEnhancement.tool;
-        let wd = mergeObject({
+        let wd = foundry.utils.mergeObject({
             dir: CONST.WALL_DIRECTIONS.BOTH,
             door: CONST.WALL_DOOR_TYPES.NONE,
             ds: CONST.WALL_DOOR_STATES.CLOSED
@@ -1165,7 +1202,7 @@ export class MonksWallEnhancement {
         for (let i = 0; i < wallpoints.length - 1; i++) {
             if (i < wallpoints.length - 1) {
                 wd.c = [wallpoints[i].x, wallpoints[i].y, wallpoints[i + 1].x, wallpoints[i + 1].y];
-                docs.push(duplicate(wd));
+                docs.push(foundry.utils.duplicate(wd));
             }
         }
 
@@ -1200,7 +1237,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
         wallCtrls.push(
             {
                 name: "toggledragtogether",
-                title: "Drag points together",
+                title: i18n("MonksWallEnhancement.DragPointsTogether"),
                 icon: "fas fa-project-diagram",
                 toggle: true,
                 active: true
@@ -1211,14 +1248,14 @@ Hooks.on("getSceneControlButtons", (controls) => {
     wallCtrls.push(
         {
             name: "toggledrawwall",
-            title: "Freehand Draw Wall",
+            title: i18n("MonksWallEnhancement.FreehandDrawWall"),
             icon: "fas fa-signature",
             toggle: true,
             active: false
         },
         {
             name: "joinwallpoints",
-            title: "Join Wall Points",
+            title: i18n("MonksWallEnhancement.JoinWallPoints"),
             icon: "fas fa-broom",
             button: true,
             onClick: () => {
@@ -1234,11 +1271,19 @@ Hooks.on("getSceneControlButtons", (controls) => {
         },*/
         {
             name: "snaptowall",
-            title: "Snap To Point",
-            icon: "fas fa-plus-circle",
+            title: i18n("MonksWallEnhancement.SnapToPoint"),
+            icon: "fas fa-arrow-down-up-across-line",
             toggle: true,
             active: false
-        }
+        },
+        {
+            name: "togglewalls",
+            title: i18n("MonksWallEnhancement.ToggleWallsDisplay"),
+            icon: "fas fa-eye",
+            toggle: true,
+            active: setting("wallsDisplayToggle"),
+            onClick: toggled => game.settings.set("monks-wall-enhancement", "wallsDisplayToggle", toggled)
+        },
     );
     
     let wallTools = controls.find(control => control.name === "walls").tools;

@@ -1,3 +1,15 @@
+# Version 12.01
+
+v12 compatibility
+
+Added the ability to see walls no matter the layer you're on.  That way you can set up a map easier.
+
+Fixed issue where a one way door would still show the door control from a specific direction.
+
+Fixed issue where using alt to change a door state was causing the sound effect to players
+
+Fixed issues when converting a drawing to walls not accurately reflecting the drawings position or rotation
+
 # Version 11.02
 
 Added the option to allow position of wall using arrow keys.  Hold down the Shift key to move only one of the points, and Ctrl + Shift to move the other one.
